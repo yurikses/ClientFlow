@@ -13,8 +13,9 @@
 #include "database.h"
 #include "config.h"
 #include "clientwindow.h"
+#include "settingsdialog.h"
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow), dbManager(new Database(this)), config(new Config(this)), clientsTableWidget(ui->tableWidget)
+    : QMainWindow(parent), ui(new Ui::MainWindow), dbManager(new Database(this)), config(Config::instance()), clientsTableWidget(ui->tableWidget)
 {
     ui->setupUi(this);
     clientsTableWidget = ui->tableWidget;
@@ -24,7 +25,7 @@ MainWindow::MainWindow(QWidget *parent)
         return;
     }
 
-    dbManager->createTable(config->getBDConfig());
+    dbManager->createTable(config.getBDConfig());
     connect(clientsTableWidget, &QTableWidget::cellDoubleClicked, this, &MainWindow::openEditClientWindow);
     loadDataFromDatabase(clientsTableWidget);
 
@@ -38,14 +39,20 @@ MainWindow::~MainWindow() {
 
 void MainWindow::loadDataFromDatabase(QTableWidget *clientsTableWidget)
 {
+    QJsonObject dbConfig = config.getBDConfig(); // получаем настройки для всех таблиц
+
+    if (!dbManager->syncTableStructure(dbConfig)) {
+        qDebug() << "Failed to update table structure";
+    }
+
     // Получаем имена полей из конфигурационного файла для таблицы "clients"
-    QStringList fieldNames = config->getFieldNamesForTable();
+    QStringList fieldNames = config.getFieldNamesForTable();
 
     // Получаем данные из базы данных
     QList<QMap<QString, QVariant>> dataList = dbManager->selectData(fieldNames);
 
     // Получаем заголовки столбцов из конфигурационного файла
-    QList<QString> headersList = config->getBDlist();
+    QList<QString> headersList = config.getBDlist();
 
     // Определяем количество строк и столбцов
     int rowCount = dataList.size();
@@ -57,23 +64,27 @@ void MainWindow::loadDataFromDatabase(QTableWidget *clientsTableWidget)
 
     // Устанавливаем заголовки столбцов
     clientsTableWidget->setHorizontalHeaderLabels(headersList);
+    // Растягиваем все колонки
+    for (int col = 0; col < columnCount; ++col) {
+        clientsTableWidget->horizontalHeader()->setSectionResizeMode(col, QHeaderView::Stretch);
+    }
 
     // Заполняем QTableWidget данными
     for (int row = 0; row < rowCount; ++row) {
         QMap<QString, QVariant> rowData = dataList[row];
         for (int col = 0; col < columnCount; ++col) {
             QString header = headersList[col];
-            QString fieldName = config->getFieldNamesForTable()[col];
+            QString fieldName = config.getFieldNamesForTable()[col];
             QTableWidgetItem *item = new QTableWidgetItem(rowData[fieldName].toString());
             clientsTableWidget->setItem(row, col, item);
         }
     }
 
-    QMessageBox::information(this, "Успех", "Данные успешно загружены.");
+
 }
 void MainWindow::openCreateClientWindow()
 {
-    ClientWindow *clientWindow = new ClientWindow(dbManager, this);
+    ClientWindow *clientWindow = new ClientWindow("clients", dbManager, this);
     connect(clientWindow, &ClientWindow::accepted, this, &MainWindow::handleClientWindowAccepted);
     clientWindow->show();
 }
@@ -87,7 +98,7 @@ void MainWindow::openEditClientWindow(int row)
     }
 
     int clientId = clientsTableWidget->item(row, 0)->text().toInt();
-    ClientWindow *clientWindow = new ClientWindow(clientId, dbManager, this);
+    ClientWindow *clientWindow = new ClientWindow(clientId, "clients", dbManager, this);
     connect(clientWindow, &ClientWindow::accepted, this, &MainWindow::handleClientWindowAccepted);
     clientWindow->show();
 }
@@ -96,4 +107,40 @@ void MainWindow::handleClientWindowAccepted()
 {
     // Перезагружаем данные после создания или редактирования клиента
     loadDataFromDatabase(clientsTableWidget);
+    QMessageBox::information(this, "Успех", "Данные успешно записаны.");
 }
+
+void MainWindow::on_action_3_triggered()
+{
+    settingsdialog *settingsUI = new settingsdialog(this);
+    settingsUI->show();
+    connect(settingsUI, &settingsdialog::accepted, this, &MainWindow::handleClientWindowAccepted);
+}
+
+
+void MainWindow::on_delClientButton_clicked()
+{
+
+    QList<QTableWidgetItem*> selectedItems = ui->tableWidget->selectedItems();
+
+    if (!selectedItems.isEmpty()) {
+
+        int row = selectedItems.first()->row();
+
+
+        QTableWidgetItem* firstItem = ui->tableWidget->item(row, 0);
+
+        if (firstItem) {
+            QString value = firstItem->text();
+            dbManager->deleteData(value.toInt());
+            loadDataFromDatabase(clientsTableWidget);
+            QMessageBox::information(this, "Успех", "Запись успешно удалена.");
+            qDebug() << "Значение из первого столбца:" << value;
+        } else {
+            qDebug() << "Первая ячейка пустая!";
+        }
+    } else {
+        qDebug() << "Нет выделенных строк!";
+    }
+}
+

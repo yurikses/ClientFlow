@@ -18,7 +18,20 @@ struct ColumnSettings {
     QString tableDesc;
 };
 
+
 Config::Config(QObject *parent) : QObject(parent) {
+
+}
+
+Config& Config::instance()
+{
+    static Config instance; // Создается один раз
+    instance.importJsonFile();
+    instance.config = instance.getTableConfig("clients");
+    return instance;
+}
+
+void Config::importJsonFile(){
     QDir currentDir = QDir::currentPath();
     QString fileName = "config.json";
     QString filePath = currentDir.filePath(fileName);
@@ -26,12 +39,12 @@ Config::Config(QObject *parent) : QObject(parent) {
 
     if (!file.exists()) {
         ColumnSettings dbDefault[] = {
-          {"clients", "id", 10, "INTEGER", "NULL", "Идентификатор"},
-          {"clients", "name", 50, "TEXT", "", "ФИО"},
-          {"clients", "age", 3, "INTEGER", "0", "Возраст"},
-          {"clients", "phone", 3, "VARCHAR", "", "Номер телефона"},
-          {"clients", "birthDay", 3, "DATE", "", "День рождения"},
-        };
+                                      {"clients", "id", 10, "INTEGER", "NULL", "Идентификатор"},
+                                      {"clients", "name", 50, "TEXT", "", "ФИО"},
+                                      {"clients", "age", 3, "INTEGER", "0", "Возраст"},
+                                      {"clients", "phone", 3, "VARCHAR", "", "Номер телефона"},
+                                      {"clients", "birthDay", 3, "DATE", "", "День рождения"},
+                                      };
 
         QJsonObject settingsObj;
 
@@ -96,6 +109,38 @@ QJsonObject Config::loadConfigFile() {
 }
 
 
+TableConfig Config::getTableConfig(const QString &tableName) {
+    TableConfig tableConfig;
+    QJsonObject dbObj = configFile.value("db").toObject();
+
+    if (dbObj.contains(tableName)) {
+        QJsonArray columnsArray = dbObj.value(tableName).toArray();
+
+        for (const QJsonValue &columnValue : columnsArray) {
+            QJsonObject columnEntry = columnValue.toObject();
+            for (const QString &columnName : columnEntry.keys()) {
+                QJsonObject columnDetails = columnEntry.value(columnName).toObject();
+
+                FieldConfig field;
+                field.name = columnName;
+                field.format = columnDetails.value("format").toString();
+                field.size = columnDetails.value("size").toInt();
+                field.defaultValue = columnDetails.value("defaultValue").toString();
+                field.tableDesc = columnDetails.value("tableDesc").toString();
+
+                // Загружаем старые имена
+                QJsonArray oldNamesArray = columnDetails.value("oldNames").toArray();
+                for (const QJsonValue &val : oldNamesArray) {
+                    field.oldNames.append(val.toString());
+                }
+
+                tableConfig.fieldConfigs.append(field);
+            }
+        }
+    }
+
+    return tableConfig;
+}
 
 QList<QString> Config::getBDlist(){
     QJsonObject dbObj = configFile.value("db").toObject();
@@ -139,6 +184,32 @@ QList<QString> Config::getFieldNamesForTable() {
 
                     if (!tableDesc.isEmpty()) {
                         fieldNames.append(columnName);
+                    }
+                }
+            }
+        }
+    }
+
+    return fieldNames;
+}
+
+QList<QString> Config::getFieldDescForTable() {
+    QJsonObject dbObj = configFile.value("db").toObject();
+    QList<QString> fieldNames;
+    QString tableName = "clients";
+
+    if (dbObj.contains(tableName)) {
+        QJsonArray columnsArray = dbObj.value(tableName).toArray();
+
+        for (const QJsonValue &columnEntry : columnsArray) {
+            if (columnEntry.isObject()) {
+                QJsonObject columnObj = columnEntry.toObject();
+                for (const QString &columnName : columnObj.keys()) {
+                    QJsonObject columnDetails = columnObj.value(columnName).toObject();
+                    QString tableDesc = columnDetails.value("tableDesc").toString();
+
+                    if (!tableDesc.isEmpty()) {
+                        fieldNames.append(tableDesc);
                     }
                 }
             }

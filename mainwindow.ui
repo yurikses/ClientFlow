@@ -6,130 +6,224 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1433</width>
-    <height>703</height>
+    <width>1486</width>
+    <height>566</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>ClientFlow v0.1</string>
+  </property>
+  <property name="windowIcon">
+   <iconset theme="QIcon::ThemeIcon::DocumentNew"/>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QTabWidget" name="tabWidget">
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <widget class="QWidget" name="horizontalLayoutWidget_2">
     <property name="geometry">
      <rect>
-      <x>0</x>
+      <x>12</x>
       <y>0</y>
-      <width>1431</width>
-      <height>671</height>
+      <width>1451</width>
+      <height>501</height>
      </rect>
     </property>
-    <property name="currentIndex">
-     <number>0</number>
-    </property>
-    <widget class="QWidget" name="tab">
-     <attribute name="title">
-      <string>Клиенты</string>
-     </attribute>
-     <widget class="QTableWidget" name="tableWidget">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>881</width>
-        <height>411</height>
-       </rect>
-      </property>
-      <property name="mouseTracking">
-       <bool>true</bool>
-      </property>
-      <property name="tabletTracking">
-       <bool>true</bool>
-      </property>
-      <property name="focusPolicy">
-       <enum>Qt::FocusPolicy::TabFocus</enum>
-      </property>
-      <property name="contextMenuPolicy">
-       <enum>Qt::ContextMenuPolicy::DefaultContextMenu</enum>
-      </property>
-      <property name="editTriggers">
-       <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
-      </property>
-      <property name="alternatingRowColors">
-       <bool>true</bool>
-      </property>
-      <property name="selectionMode">
-       <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
-      </property>
-      <property name="selectionBehavior">
-       <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
-      </property>
-      <column>
-       <property name="text">
-        <string>id</string>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QTabWidget" name="tabWidget">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
        </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>Новый столбец</string>
+       <property name="currentIndex">
+        <number>0</number>
        </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>Номер телефона</string>
-       </property>
-      </column>
-     </widget>
-     <widget class="QWidget" name="formLayoutWidget">
-      <property name="geometry">
-       <rect>
-        <x>890</x>
-        <y>0</y>
-        <width>521</width>
-        <height>411</height>
-       </rect>
-      </property>
-      <layout class="QFormLayout" name="formLayout">
-       <item row="0" column="0">
-        <widget class="QLabel" name="label">
+       <widget class="QWidget" name="tab">
+        <attribute name="title">
+         <string>Клиенты</string>
+        </attribute>
+        <widget class="QPushButton" name="addClientButton">
+         <property name="geometry">
+          <rect>
+           <x>30</x>
+           <y>420</y>
+           <width>171</width>
+           <height>31</height>
+          </rect>
+         </property>
          <property name="text">
-          <string>TextLabel</string>
+          <string>Добавить клиента</string>
          </property>
         </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QLineEdit" name="lineEdit"/>
-       </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="label_2">
+        <widget class="QPushButton" name="delClientButton">
+         <property name="geometry">
+          <rect>
+           <x>230</x>
+           <y>420</y>
+           <width>171</width>
+           <height>29</height>
+          </rect>
+         </property>
          <property name="text">
-          <string>TextLabel</string>
+          <string>Удалить клиента</string>
          </property>
         </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QLineEdit" name="lineEdit_2"/>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QPushButton" name="addClientButton">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>430</y>
-        <width>171</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Добавить клиента</string>
-      </property>
-     </widget>
-    </widget>
-    <widget class="QWidget" name="tab_2">
-     <attribute name="title">
-      <string>Статистика</string>
-     </attribute>
-    </widget>
+        <widget class="QWidget" name="horizontalLayoutWidget">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>10</y>
+           <width>1411</width>
+           <height>401</height>
+          </rect>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout" stretch="2,1">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <property name="leftMargin">
+           <number>20</number>
+          </property>
+          <property name="topMargin">
+           <number>10</number>
+          </property>
+          <property name="rightMargin">
+           <number>10</number>
+          </property>
+          <property name="bottomMargin">
+           <number>10</number>
+          </property>
+          <item>
+           <layout class="QVBoxLayout" name="verticalLayout" stretch="1,10">
+            <property name="spacing">
+             <number>20</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="label_3">
+              <property name="font">
+               <font>
+                <family>Segoe UI</family>
+                <pointsize>16</pointsize>
+                <bold>true</bold>
+                <kerning>true</kerning>
+                <hintingpreference>PreferDefaultHinting</hintingpreference>
+               </font>
+              </property>
+              <property name="text">
+               <string>Таблица учета клиентов</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QTableWidget" name="tableWidget">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="mouseTracking">
+               <bool>true</bool>
+              </property>
+              <property name="tabletTracking">
+               <bool>true</bool>
+              </property>
+              <property name="focusPolicy">
+               <enum>Qt::FocusPolicy::TabFocus</enum>
+              </property>
+              <property name="contextMenuPolicy">
+               <enum>Qt::ContextMenuPolicy::DefaultContextMenu</enum>
+              </property>
+              <property name="editTriggers">
+               <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+              </property>
+              <property name="alternatingRowColors">
+               <bool>true</bool>
+              </property>
+              <property name="selectionMode">
+               <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
+              </property>
+              <property name="selectionBehavior">
+               <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+              </property>
+              <property name="verticalScrollMode">
+               <enum>QAbstractItemView::ScrollMode::ScrollPerPixel</enum>
+              </property>
+              <property name="horizontalScrollMode">
+               <enum>QAbstractItemView::ScrollMode::ScrollPerPixel</enum>
+              </property>
+              <property name="gridStyle">
+               <enum>Qt::PenStyle::SolidLine</enum>
+              </property>
+              <property name="sortingEnabled">
+               <bool>true</bool>
+              </property>
+              <attribute name="horizontalHeaderCascadingSectionResizes">
+               <bool>true</bool>
+              </attribute>
+              <column>
+               <property name="text">
+                <string>id</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Новый столбец</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Номер телефона</string>
+               </property>
+              </column>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QFormLayout" name="formLayout">
+            <item row="0" column="0">
+             <widget class="QLabel" name="label">
+              <property name="text">
+               <string>TextLabel</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLineEdit" name="lineEdit"/>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_2">
+              <property name="text">
+               <string>TextLabel</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLineEdit" name="lineEdit_2"/>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+       <widget class="QWidget" name="tab_2">
+        <attribute name="title">
+         <string>Статистика</string>
+        </attribute>
+       </widget>
+      </widget>
+     </item>
+    </layout>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -137,7 +231,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1433</width>
+     <width>1486</width>
      <height>26</height>
     </rect>
    </property>

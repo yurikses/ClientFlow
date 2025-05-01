@@ -1,106 +1,138 @@
 #include "clientwindow.h"
-#include <QVBoxLayout>
 #include <QFormLayout>
-#include <QLabel>
+#include <QVBoxLayout>
+#include <QDialogButtonBox>
+#include <QLineEdit>
+#include <QDateEdit>
+#include <QComboBox>
 #include <QMessageBox>
 
-ClientWindow::ClientWindow(Database *db, QWidget *parent)
-    : QDialog(parent), database(db), clientId(-1)
+ClientWindow::ClientWindow(const QString &tableName, Database *db, QWidget *parent)
+    : QDialog(parent), tableName(tableName), database(db), clientId(-1)
 {
     setupUI();
 }
 
-ClientWindow::ClientWindow(int clientId, Database *db, QWidget *parent)
-    : QDialog(parent), database(db), clientId(clientId)
+ClientWindow::ClientWindow(int id, const QString &tableName, Database *db, QWidget *parent)
+    : QDialog(parent), tableName(tableName), database(db), clientId(id)
 {
     setupUI();
-    populateFields(clientId);
+    populateFields(id);
 }
 
 void ClientWindow::setupUI()
 {
-    // Создаем поля для ввода данных
-    nameLineEdit = new QLineEdit(this);
-    phoneLineEdit = new QLineEdit(this);
-    birthDayDateEdit = new QDateEdit(this);
-    ageLineEdit = new QLineEdit(this);
+    setWindowTitle(clientId == -1 ? "Создание записи" : "Редактирование записи");
 
-    // Настройка виджетов
-    birthDayDateEdit->setCalendarPopup(true);
-    birthDayDateEdit->setDisplayFormat("yyyy-MM-dd");
-
-    // Создаем форму для размещения полей
     QFormLayout *formLayout = new QFormLayout;
-    formLayout->addRow("Имя:", nameLineEdit);
-    formLayout->addRow("Возраст:", ageLineEdit);
-    formLayout->addRow("Номер телефона:", phoneLineEdit);
-    formLayout->addRow("День рождения:", birthDayDateEdit);
 
-    // Создаем кнопки
-    buttonBox = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, Qt::Horizontal, this);
+    Config &config = Config::instance();
+    TableConfig tableConfig = config.getTableConfig(tableName);
+
+    for (const FieldConfig &field : tableConfig.fieldConfigs) {
+        if (field.tableDesc.isEmpty()) continue;
+
+        QWidget *widget = nullptr;
+        QString fieldType = field.format.toUpper();
+
+        if (fieldType == "TEXT" || fieldType == "VARCHAR") {
+            QLineEdit *lineEdit = new QLineEdit(this);
+            widget = lineEdit;
+        } else if (fieldType == "DATE") {
+            QDateEdit *dateEdit = new QDateEdit(this);
+            dateEdit->setCalendarPopup(true);
+            dateEdit->setDisplayFormat("yyyy-MM-dd");
+            widget = dateEdit;
+        } else if (fieldType == "INTEGER" || fieldType == "INT") {
+            QLineEdit *lineEdit = new QLineEdit(this);
+            widget = lineEdit;
+        } else if (fieldType == "BOOLEAN") {
+            QComboBox *comboBox = new QComboBox(this);
+            comboBox->addItems({"false", "true"});
+            widget = comboBox;
+        }
+
+        if (widget) {
+            formLayout->addRow(field.tableDesc + ":", widget);
+            fieldWidgets[field.name] = widget;
+        }
+    }
+
+    QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, Qt::Horizontal, this);
     connect(buttonBox, &QDialogButtonBox::accepted, this, &ClientWindow::saveClient);
-    connect(buttonBox, &QDialogButtonBox::rejected, this, &ClientWindow::cancel);
+    connect(buttonBox, &QDialogButtonBox::rejected, this, &ClientWindow::reject);
 
-    // Создаем вертикальный макет
-    QVBoxLayout *layout = new QVBoxLayout;
-    layout->addLayout(formLayout);
-    layout->addWidget(buttonBox);
-
-    // Устанавливаем макет для окна
-    setLayout(layout);
-
-    // Устанавливаем заголовок окна
-    setWindowTitle(clientId == -1 ? "Создание клиента" : "Редактирование клиента");
+    QVBoxLayout *mainLayout = new QVBoxLayout(this);
+    mainLayout->addLayout(formLayout);
+    mainLayout->addWidget(buttonBox);
 }
 
-void ClientWindow::populateFields(int clientId)
+void ClientWindow::populateFields(int id)
 {
-    QSqlQuery query;
-    query.prepare("SELECT name, age, phone, birthDay FROM clients WHERE id = :id");
-    query.bindValue(":id", clientId);
+    QSqlQuery query(database->getDb());
+    query.prepare(QString("SELECT * FROM %1 WHERE id = :id").arg(tableName));
+    query.bindValue(":id", id);
 
-    if (!query.exec()) {
-        QMessageBox::critical(this, "Ошибка", "Не удалось получить данные клиента: " + query.lastError().text());
+    if (!query.exec() || !query.next()) {
+        QMessageBox::critical(this, "Ошибка", "Не удалось загрузить данные.");
+        reject();
         return;
     }
 
-    if (query.next()) {
-        nameLineEdit->setText(query.value("name").toString());
-        ageLineEdit->setText(query.value("age").toString());
-        phoneLineEdit->setText(query.value("phone").toString());
-        birthDayDateEdit->setDate(query.value("birthDay").toDate());
-    } else {
-        QMessageBox::warning(this, "Предупреждение", "Клиент с ID " + QString::number(clientId) + " не найден.");
-        cancel();
+    for (auto it = fieldWidgets.begin(); it != fieldWidgets.end(); ++it) {
+        QString fieldName = it.key();
+        QWidget *widget = it.value();
+
+        QVariant value = query.value(fieldName);
+
+        if (QLineEdit *lineEdit = qobject_cast<QLineEdit*>(widget)) {
+            lineEdit->setText(value.toString());
+        } else if (QDateEdit *dateEdit = qobject_cast<QDateEdit*>(widget)) {
+            dateEdit->setDate(value.toDate());
+        } else if (QComboBox *comboBox = qobject_cast<QComboBox*>(widget)) {
+            comboBox->setCurrentText(value.toString().toLower() == "true" ? "true" : "false");
+        }
     }
 }
 
 void ClientWindow::saveClient()
 {
-    QString name = nameLineEdit->text();
-    int age = ageLineEdit->text().toInt();
-    QString phone = phoneLineEdit->text();
-    QDate birthDay = birthDayDateEdit->date();
+    QVariantMap recordData;
+
+    for (auto it = fieldWidgets.begin(); it != fieldWidgets.end(); ++it) {
+        QString fieldName = it.key();
+        QWidget *widget = it.value();
+
+        QVariant value;
+
+        if (QLineEdit *lineEdit = qobject_cast<QLineEdit*>(widget)) {
+            value = lineEdit->text();
+        } else if (QDateEdit *dateEdit = qobject_cast<QDateEdit*>(widget)) {
+            value = dateEdit->date();
+        } else if (QComboBox *comboBox = qobject_cast<QComboBox*>(widget)) {
+            value = comboBox->currentText();
+        }
+
+        recordData[fieldName] = value;
+    }
+
     database->openConnection("clients.db");
 
     if (clientId == -1) {
-        // Создание нового клиента
-        if (database->insertData(name, age, phone, birthDay)) {
+        if (database->insertRecord(tableName, recordData)) {
 
-            emit accepted(); // Отправляем сигнал accepted
+            accept();
             close();
+        } else {
+            QMessageBox::critical(this, "Ошибка", "Не удалось создать запись.");
         }
     } else {
-        // Обновление существующего клиента
-        if (database->updateData(clientId, name, age, phone, birthDay)) {
+        if (database->updateRecord(tableName, clientId, recordData)) {
 
-            emit accepted(); // Отправляем сигнал accepted
+            accept();
             close();
+        } else {
+            QMessageBox::critical(this, "Ошибка", "Не удалось обновить запись.");
         }
     }
-}
-
-void ClientWindow::cancel()
-{
-    close();
 }

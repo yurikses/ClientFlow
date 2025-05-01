@@ -2,39 +2,26 @@
 #define CLIENTWINDOW_H
 
 #include <QDialog>
-#include <QLineEdit>
-#include <QDateEdit>
-#include <QFormLayout>
-#include <QDialogButtonBox>
-#include <QPushButton>
-#include <QMessageBox>
+#include <QMap>
 #include "database.h"
+#include "config.h"
 
 class ClientWindow : public QDialog {
     Q_OBJECT
 
 public:
-    explicit ClientWindow(Database *db, QWidget *parent = nullptr);
-    explicit ClientWindow(int clientId, Database *db, QWidget *parent = nullptr);
-
-signals:
-    void accepted(); // Сигнал для уведомления о завершении операции
-
-private slots:
-    void saveClient();
-    void cancel();
+    explicit ClientWindow(const QString &tableName, Database *db, QWidget *parent = nullptr);
+    explicit ClientWindow(int id, const QString &tableName, Database *db, QWidget *parent = nullptr);
 
 private:
     void setupUI();
-    void populateFields(int clientId);
-
-    QLineEdit *nameLineEdit;
-    QLineEdit *phoneLineEdit;
-    QDateEdit *birthDayDateEdit;
-    QLineEdit *ageLineEdit;
-    QDialogButtonBox *buttonBox;
+    void populateFields(int id);
+    void saveClient();
+    QString tableName;
+    int clientId = -1;
     Database *database;
-    int clientId;
+
+    QMap<QString, QWidget*> fieldWidgets; // для доступа к полям по имени
 };
 
 #endif // CLIENTWINDOW_H

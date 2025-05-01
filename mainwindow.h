@@ -9,6 +9,7 @@
 #include "database.h"
 #include "config.h"
 #include "clientwindow.h"
+#include "settingsdialog.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -26,6 +27,10 @@ private slots:
     void openEditClientWindow(int row);
     void handleClientWindowAccepted();
 
+    void on_action_3_triggered();
+
+    void on_delClientButton_clicked();
+
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
@@ -34,6 +39,6 @@ private:
     Ui::MainWindow *ui;
     Database *dbManager;
     QTableWidget *clientsTableWidget;
-    Config *config;
+    Config &config;
 };
 #endif // MAINWINDOW_H

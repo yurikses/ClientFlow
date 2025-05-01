@@ -10,6 +10,9 @@
 #include <QMap>
 #include <QVariant>
 #include <QJsonObject>
+#include "config.h"
+
+
 
 class Database : public QObject {
     Q_OBJECT
@@ -17,7 +20,7 @@ class Database : public QObject {
 public:
     explicit Database(QObject *parent = nullptr);
     ~Database();
-
+    bool syncTableStructure(const QJsonObject &dbConfig);
     bool openConnection(const QString &dbName);
     void closeConnection();
     bool createTable(const QJsonObject &dbConfig);
@@ -26,7 +29,11 @@ public:
     QList<QMap<QString, QVariant>> selectData(const QStringList &fieldNames);
     bool deleteData(int id);
     QSqlQuery executeQuery(const QString &queryStr);
-
+    QList<FieldConfig> extractFieldConfigs(const QJsonArray &columnsArray);
+    bool insertRecord(const QString &table, const QVariantMap &data);
+    bool updateRecord(const QString &table, int id, const QVariantMap &data);
+    QVariantMap selectRecord(const QString &table, int id);
+    QSqlDatabase getDb(); // добавь в приватных методах
 private:
     QSqlDatabase db;
 };

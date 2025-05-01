@@ -2,6 +2,7 @@
 #include <QObject>
 #include <QSqlDatabase>
 #include <QSqlQuery>
+#include <QSqlRecord>
 #include <QSqlError>
 #include <QDebug>
 #include "database.h"
@@ -154,4 +155,228 @@ QSqlQuery Database::executeQuery(const QString &queryStr) {
         qDebug() << "Query executed successfully:" << queryStr;
     }
     return query;
+}
+
+bool Database::syncTableStructure(const QJsonObject &dbConfig) {
+    for (const QString &tableName : dbConfig.keys()) {
+        QJsonArray columnsArray = dbConfig.value(tableName).toArray();
+
+        QSqlQuery query;
+        if (!query.exec(QString("PRAGMA table_info(%1)").arg(tableName))) {
+            qCritical() << "Failed to get table info for" << tableName;
+            return false;
+        }
+
+        QList<QPair<QString, QString>> currentColumns;
+        while (query.next()) {
+            QString name = query.value("name").toString().toLower(); // нормализуем регистр
+            QString type = query.value("type").toString().toUpper();
+            currentColumns.append({name, type});
+        }
+
+        QList<FieldConfig> expectedFields = extractFieldConfigs(columnsArray);
+
+        bool needsRecreate = (currentColumns.size() != expectedFields.size());
+
+        if (!needsRecreate) {
+            for (int i = 0; i < currentColumns.size(); ++i) {
+                if (currentColumns[i].first != expectedFields[i].name.toLower() ||
+                    currentColumns[i].second != expectedFields[i].format.toUpper()) {
+                    needsRecreate = true;
+                    break;
+                }
+            }
+        }
+
+        if (!needsRecreate) {
+            qDebug() << "Таблица" << tableName << "уже соответствует конфигурации.";
+            continue;
+        }
+
+        QString newTableName = tableName + "_new";
+
+        if (query.exec(QString("DROP TABLE IF EXISTS %1;").arg(newTableName))) {
+            qDebug() << "Старая временная таблица" << newTableName << "удалена.";
+        }
+
+        QStringList columnDefs;
+        for (const auto &field : expectedFields) {
+            QString def = field.name + " " + field.format;
+            if (field.name == "id") {
+                def += " PRIMARY KEY AUTOINCREMENT";
+            }
+            columnDefs << def;
+        }
+
+        QString createNewTable = QString("CREATE TABLE %1 (%2);")
+                                     .arg(newTableName, columnDefs.join(", "));
+        qDebug() << "SQL для создания новой таблицы:" << createNewTable;
+
+        if (!query.exec(createNewTable)) {
+            qCritical() << "Ошибка при создании новой таблицы" << newTableName;
+            qCritical() << query.lastError().text();
+            return false;
+        }
+
+        QStringList newFields;
+        QStringList oldFields;
+
+        for (const auto &field : expectedFields) {
+            newFields << field.name;
+
+            QString matchedOldName;
+            bool found = false;
+
+            // Ищем совпадение по имени или oldNames
+            for (const auto &col : currentColumns) {
+                if (col.first == field.name.toLower()) {
+                    matchedOldName = col.first;
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                for (const QString &oldName : field.oldNames) {
+                    for (const auto &col : currentColumns) {
+                        if (col.first == oldName.toLower()) {
+                            matchedOldName = col.first;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (found) break;
+                }
+            }
+
+            if (found) {
+                oldFields << matchedOldName;
+            } else {
+                oldFields << "NULL"; // поле не найдено — оставляем NULL
+            }
+        }
+
+        QString copyData = QString("INSERT INTO %1 (%2) SELECT %3 FROM %4;")
+                               .arg(newTableName, newFields.join(", "), oldFields.join(", "), tableName);
+        qDebug() << "SQL для копирования данных:" << copyData;
+
+        if (!query.exec(copyData)) {
+            qCritical() << "Ошибка при копировании данных в новую таблицу.";
+            qCritical() << query.lastError().text();
+            return false;
+        }
+
+        if (!query.exec(QString("DROP TABLE %1;").arg(tableName))) {
+            qCritical() << "Ошибка при удалении старой таблицы" << tableName;
+            return false;
+        }
+
+        if (!query.exec(QString("ALTER TABLE %1 RENAME TO %2;").arg(newTableName, tableName))) {
+            qCritical() << "Ошибка при переименовании новой таблицы в" << tableName;
+            return false;
+        }
+
+        qDebug() << "Структура таблицы" << tableName << "успешно обновлена.";
+    }
+
+    return true;
+}
+
+QList<FieldConfig> Database::extractFieldConfigs(const QJsonArray &columnsArray) {
+    QList<FieldConfig> fields;
+
+    for (const QJsonValue &columnEntry : columnsArray) {
+        if (columnEntry.isObject()) {
+            QJsonObject columnObj = columnEntry.toObject();
+            for (const QString &columnName : columnObj.keys()) {
+                QJsonObject details = columnObj.value(columnName).toObject();
+
+                FieldConfig field;
+                field.name = columnName;
+                field.format = details.value("format").toString().toUpper();
+                field.size = details.value("size").toInt();
+                field.defaultValue = details.value("defaultValue").toString();
+                field.tableDesc = details.value("tableDesc").toString();
+
+                QJsonArray oldNamesArray = details.value("oldNames").toArray();
+                for (const QJsonValue &val : oldNamesArray) {
+                    field.oldNames.append(val.toString());
+                }
+
+                fields.append(field);
+            }
+        }
+    }
+
+    return fields;
+}
+QSqlDatabase Database::getDb() {
+    return db;
+}
+
+bool Database::insertRecord(const QString &table, const QVariantMap &data) {
+    QStringList keys = data.keys();
+    QStringList placeholders;
+    for (const QString &key : keys) placeholders << ":" + key;
+
+    QString queryStr = QString("INSERT INTO %1 (%2) VALUES (%3)")
+                           .arg(table, keys.join(", "), placeholders.join(", "));
+
+    QSqlQuery query;
+    query.prepare(queryStr);
+
+    for (auto it = data.begin(); it != data.end(); ++it) {
+        query.bindValue(":" + it.key(), it.value());
+    }
+
+    if (!query.exec()) {
+        qCritical() << "Ошибка при вставке данных в таблицу" << table;
+        qCritical() << query.lastError().text();
+        return false;
+    }
+
+    return true;
+}
+
+bool Database::updateRecord(const QString &table, int id, const QVariantMap &data) {
+    QStringList assignments;
+    for (const QString &key : data.keys()) {
+        assignments << key + " = :" + key;
+    }
+
+    QString queryStr = QString("UPDATE %1 SET %2 WHERE id = :id")
+                           .arg(table, assignments.join(", "));
+
+    QSqlQuery query;
+    query.prepare(queryStr);
+    query.bindValue(":id", id);
+
+    for (auto it = data.begin(); it != data.end(); ++it) {
+        query.bindValue(":" + it.key(), it.value());
+    }
+
+    if (!query.exec()) {
+        qCritical() << "Ошибка при обновлении данных в таблице" << table;
+        qCritical() << query.lastError().text();
+        return false;
+    }
+
+    return true;
+}
+
+QVariantMap Database::selectRecord(const QString &table, int id) {
+    QSqlQuery query;
+    query.prepare(QString("SELECT * FROM %1 WHERE id = :id").arg(table));
+    query.bindValue(":id", id);
+
+    if (query.exec() && query.next()) {
+        QVariantMap result;
+        QSqlRecord record = query.record();
+        for (int i = 0; i < record.count(); ++i) {
+            result[record.fieldName(i)] = query.value(i);
+        }
+        return result;
+    }
+
+    return {};
 }

@@ -30,6 +30,8 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         config.h config.cpp
         clientwindow.h clientwindow.cpp
         clientwindow.ui
+        settingsdialog.h settingsdialog.cpp settingsdialog.ui
+
 
     )
 # Define target properties for Android with Qt 6 as:
