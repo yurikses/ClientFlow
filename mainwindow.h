@@ -30,6 +30,7 @@ private slots:
     void on_action_3_triggered();
 
     void on_delClientButton_clicked();
+    void handleSettingsWindowAccepted();
 
 public:
     MainWindow(QWidget *parent = nullptr);

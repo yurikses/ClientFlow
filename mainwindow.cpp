@@ -110,11 +110,18 @@ void MainWindow::handleClientWindowAccepted()
     QMessageBox::information(this, "Успех", "Данные успешно записаны.");
 }
 
+void MainWindow::handleSettingsWindowAccepted()
+{
+    config.importJsonFile();
+    loadDataFromDatabase(clientsTableWidget);
+
+}
+
 void MainWindow::on_action_3_triggered()
 {
     settingsdialog *settingsUI = new settingsdialog(this);
     settingsUI->show();
-    connect(settingsUI, &settingsdialog::accepted, this, &MainWindow::handleClientWindowAccepted);
+    connect(settingsUI, &settingsdialog::accepted, this, &MainWindow::handleSettingsWindowAccepted);
 }
 
 
