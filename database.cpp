@@ -110,6 +110,40 @@ bool Database::updateData(int id, const QString &name, int age, const QString &p
     return true;
 }
 
+QList<QMap<QString, QVariant>> Database::searchData(const QStringList &fieldNames, const QString &searchTerm) {
+    QList<QMap<QString, QVariant>> dataList;
+
+    QString selectQuery = "SELECT ";
+    selectQuery += fieldNames.join(", ");
+    selectQuery += " FROM clients";
+
+    if (!searchTerm.isEmpty()) {
+        selectQuery += " WHERE ";
+        QStringList conditions;
+        for (const QString &field : fieldNames) {
+            conditions.append(field + " LIKE :search");
+        }
+        selectQuery += conditions.join(" OR ");
+    }
+
+    QSqlQuery query;
+    query.prepare(selectQuery);
+    if (!searchTerm.isEmpty()) {
+        query.bindValue(":search", "%"+searchTerm+"%" );
+    }
+    query.exec();
+    while (query.next()) {
+        QMap<QString, QVariant> row;
+        for (const QString &fieldName : fieldNames) {
+            row[fieldName] = query.value(fieldName);
+        }
+        dataList.append(row);
+    }
+
+    qDebug() << "Data selected successfully.";
+    return dataList;
+}
+
 QList<QMap<QString, QVariant>> Database::selectData(const QStringList &fieldNames) {
     QList<QMap<QString, QVariant>> dataList;
 

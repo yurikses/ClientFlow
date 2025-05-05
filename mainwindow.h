@@ -28,9 +28,11 @@ private slots:
     void handleClientWindowAccepted();
 
     void on_action_3_triggered();
+    void on_searchClientsButton_clicked();
 
     void on_delClientButton_clicked();
     void handleSettingsWindowAccepted();
+    void loadDataFromList(QList<QMap<QString,QVariant>> data,QTableWidget *clientsTableWidget);
 
 public:
     MainWindow(QWidget *parent = nullptr);

@@ -37,6 +37,7 @@ MainWindow::~MainWindow() {
     delete ui;
 }
 
+
 void MainWindow::loadDataFromDatabase(QTableWidget *clientsTableWidget)
 {
     QJsonObject dbConfig = config.getBDConfig(); // получаем настройки для всех таблиц
@@ -80,8 +81,23 @@ void MainWindow::loadDataFromDatabase(QTableWidget *clientsTableWidget)
         }
     }
 
-
 }
+
+void MainWindow::loadDataFromList(QList<QMap<QString,QVariant>> data,QTableWidget *clientsTableWidget){
+    int rowCount = data.size();
+    int columnCount = clientsTableWidget->columnCount();
+    clientsTableWidget->clearContents();
+    clientsTableWidget->setRowCount(rowCount);
+    for (int row = 0; row < rowCount; ++row) {
+        QMap<QString, QVariant> rowData = data[row];
+        for (int col = 0; col < columnCount; ++col) {
+            QString fieldName = config.getFieldNamesForTable()[col];
+            QTableWidgetItem *item = new QTableWidgetItem(rowData[fieldName].toString());
+            clientsTableWidget->setItem(row, col, item);
+        }
+    }
+}
+
 void MainWindow::openCreateClientWindow()
 {
     ClientWindow *clientWindow = new ClientWindow("clients", dbManager, this);
@@ -151,3 +167,14 @@ void MainWindow::on_delClientButton_clicked()
     }
 }
 
+void MainWindow::on_searchClientsButton_clicked()
+{
+    try {
+        QStringList fieldNames = config.getFieldNamesForTable();
+        QString searchTerm = ui->searchDatalineEdit->text();
+        auto results = dbManager->searchData(fieldNames, searchTerm);
+        loadDataFromList(results,clientsTableWidget);
+    } catch (const QSqlError &e) {
+        QMessageBox::critical(this, "Ошибка", "Ошибка поиска: " + e.text());
+    }
+}
