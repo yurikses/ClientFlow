@@ -8,9 +8,7 @@
 #include <QPushButton>
 #include "database.h"
 #include "config.h"
-#include "clientwindow.h"
-#include "settingsdialog.h"
-
+#include "statistic.h"
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -22,6 +20,8 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 private slots:
+
+
     void loadDataFromDatabase(QTableWidget *clientTableWidget);
     void openCreateClientWindow();
     void openEditClientWindow(int row);
@@ -43,5 +43,6 @@ private:
     Database *dbManager;
     QTableWidget *clientsTableWidget;
     Config &config;
+    Statistic *statisticTab;
 };
 #endif // MAINWINDOW_H

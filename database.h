@@ -34,7 +34,7 @@ public:
     bool insertRecord(const QString &table, const QVariantMap &data);
     bool updateRecord(const QString &table, int id, const QVariantMap &data);
     QVariantMap selectRecord(const QString &table, int id);
-    QSqlDatabase getDb(); // добавь в приватных методах
+    QSqlDatabase getDb();
 private:
     QSqlDatabase db;
 };

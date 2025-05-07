@@ -11,6 +11,7 @@
 #include <QMessageBox>
 #include <QDebug>
 #include "database.h"
+#include "statistic.h"
 #include "config.h"
 #include "clientwindow.h"
 #include "settingsdialog.h"
@@ -28,7 +29,8 @@ MainWindow::MainWindow(QWidget *parent)
     dbManager->createTable(config.getBDConfig());
     connect(clientsTableWidget, &QTableWidget::cellDoubleClicked, this, &MainWindow::openEditClientWindow);
     loadDataFromDatabase(clientsTableWidget);
-
+    statisticTab = new Statistic(this);
+    ui->tabWidget->addTab(statisticTab, "Статистика");
 
 }
 
@@ -37,7 +39,11 @@ MainWindow::~MainWindow() {
     delete ui;
 }
 
-
+/**
+ * @brief Функция для вставки данных в таблицу {QTableWidget *clientsTableWidget}
+ * @param clientsTableWidget виждет таблицы
+ * @arg
+ */
 void MainWindow::loadDataFromDatabase(QTableWidget *clientsTableWidget)
 {
     QJsonObject dbConfig = config.getBDConfig(); // получаем настройки для всех таблиц

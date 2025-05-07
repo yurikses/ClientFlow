@@ -61,7 +61,7 @@ bool Database::createTable(const QJsonObject &dbConfig) {
                 }
             }
         }
-
+        columns << "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP";
         createTableQuery += columns.join(", ") + ");";
         qDebug() << createTableQuery;
         QSqlQuery query;
@@ -241,7 +241,7 @@ bool Database::syncTableStructure(const QJsonObject &dbConfig) {
             }
             columnDefs << def;
         }
-
+        columnDefs << "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP";
         QString createNewTable = QString("CREATE TABLE %1 (%2);")
                                      .arg(newTableName, columnDefs.join(", "));
         qDebug() << "SQL для создания новой таблицы:" << createNewTable;
