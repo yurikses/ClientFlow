@@ -29,7 +29,7 @@ MainWindow::MainWindow(QWidget *parent)
     dbManager->createTable(config.getBDConfig());
     connect(clientsTableWidget, &QTableWidget::cellDoubleClicked, this, &MainWindow::openEditClientWindow);
     loadDataFromDatabase(clientsTableWidget);
-    statisticTab = new Statistic(this);
+    statisticTab = new Statistic(this, dbManager);
     ui->tabWidget->addTab(statisticTab, "Статистика");
 
 }
