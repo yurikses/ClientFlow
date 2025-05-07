@@ -31,6 +31,12 @@ void Statistic::createUI() {
     connect(periodSelector, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &Statistic::updateChart);
     controlsLayout->addRow("Период:", periodSelector);
 
+    dataTypeSelector = new QComboBox();
+    dataTypeSelector->addItem("Новые клиенты", Count);
+    dataTypeSelector->addItem("Количество клиентов", Growth);
+    connect(dataTypeSelector, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &Statistic::updateChart);
+    controlsLayout->addRow("Статистика:", dataTypeSelector);
+
     // Контрол выбора типа графика
     chartTypeSelector = new QComboBox();
     chartTypeSelector->addItem("Столбчатый", BarChart);
@@ -39,6 +45,8 @@ void Statistic::createUI() {
     controlsLayout->addRow("Тип графика:", chartTypeSelector);
 
     mainLayout->addLayout(controlsLayout);
+
+
 
     // График
     chartView = new QChartView();
@@ -51,9 +59,10 @@ void Statistic::createUI() {
 void Statistic::updateChart() {
     PeriodeMode mode = static_cast<PeriodeMode>(periodSelector->currentData().toInt());
     ChartType chartType = static_cast<ChartType>(chartTypeSelector->currentData().toInt());
-
-    loadChartData(mode, chartType);
+    ChartDataType dataType = static_cast<ChartDataType>(dataTypeSelector->currentData().toInt());
+    loadChartData(mode, chartType, dataType);
 }
+
 
 QDate Statistic::getStartDateFromMode(PeriodeMode mode) {
     QDate today = QDate::currentDate();
@@ -90,8 +99,9 @@ bool Statistic::isWeeklyInterval(PeriodeMode mode) {
 }
 
 // Функция генерации всех дат в выбранном периоде
-QStringList generateFullDateRange(const QDate &start, const QDate &end, bool weekly) {
+QStringList Statistic::generateFullDateRange(const QDate &start, const QDate &end, bool weekly) {
     QStringList dates;
+
     if (!weekly) {
         for (QDate date = start; date <= end; date = date.addDays(1)) {
             dates << date.toString("yyyy-MM-dd");
@@ -99,22 +109,23 @@ QStringList generateFullDateRange(const QDate &start, const QDate &end, bool wee
     } else {
         QDate currentDate = start;
         while (currentDate <= end) {
-            // Сохраняем неделю в формате "2025-26
             int weekNum = currentDate.weekNumber();
-            QString weekKey = currentDate.toString("yyyy-") + QString("%1").arg(currentDate.weekNumber());
+            QString weekKey = QString("%1-%2").arg(currentDate.year()).arg(weekNum, 2, 10, QChar('0'));
 
             if (!dates.contains(weekKey)) {
                 dates << weekKey;
             }
+
             currentDate = currentDate.addDays(7);
         }
     }
+
     return dates;
 }
 
-void Statistic::loadChartData(PeriodeMode mode, ChartType chartType) {
+void Statistic::loadChartData(PeriodeMode mode, ChartType chartType, ChartDataType dataType) {
     QDate start = getStartDateFromMode(mode);
-    QDate end = QDate::currentDate().addDays(1);
+    QDate end = QDate::currentDate().addDays(1); // Чтобы включить сегодняшнюю дату
 
     // Очистка серии
     for (QAbstractSeries *series : chart->series()) {
@@ -142,16 +153,18 @@ void Statistic::loadChartData(PeriodeMode mode, ChartType chartType) {
     }
 
     chart->setAnimationOptions(QChart::AllAnimations);
+
     // Определяем тип разбиения
     bool weekly = isWeeklyInterval(mode);
 
-    // Генерируем все даты в выбранном периоде
+    // Генерируем все даты/недели в выбранном периоде
     QStringList fullDates = generateFullDateRange(start, end, weekly);
 
-    // Подготавливаем массив значений: 0 для каждой даты/недели
+    // Подготавливаем массив значений
     QList<int> values(fullDates.size(), 0);
 
     QSqlQuery query(database->getDb());
+
     QString groupByClause = weekly ? "strftime('%Y-%W', created_at)" : "DATE(created_at)";
     query.prepare(QString("SELECT %1 AS period_key, COUNT(*) AS count "
                           "FROM clients "
@@ -159,27 +172,52 @@ void Statistic::loadChartData(PeriodeMode mode, ChartType chartType) {
                           "GROUP BY %1")
                       .arg(groupByClause));
     query.bindValue(":start", start.toString("yyyy-MM-dd"));
-    query.bindValue(":end", end.addDays(1).toString("yyyy-MM-dd"));
+    query.bindValue(":end", end.toString("yyyy-MM-dd"));
 
     if (!query.exec()) {
         QMessageBox::critical(this, "Ошибка", "Не удалось получить данные: " + query.lastError().text());
         return;
     }
 
+    int cumulative = 0;
+
     while (query.next()) {
         QString key = query.value("period_key").toString();
         int count = query.value("count").toInt();
 
-        int index = fullDates.indexOf(key);
+        int index = -1;
+
+        if (!weekly) {
+            index = fullDates.indexOf(key);
+        } else {
+            // Для недель сравниваем ключ в формате "2024-W15"
+            //QDate date = QDate::fromString(key, "yyyy-MM-dd");
+            //QString weekKey = QString("%1-%2").arg(date.year()).arg(date.weekNumber(), 2, 10, QChar('0'));
+            QString weekKey = key;
+
+            index = fullDates.indexOf(weekKey);
+        }
+
         if (index != -1) {
             values[index] = count;
         }
     }
 
-    // Создаём серию на основе выбранного типа графика
+    // Считаем накопленный итог
+    QList<int> cumulativeValues = values;
+    cumulative = 0;
+    for (int i = 0; i < cumulativeValues.size(); ++i) {
+        cumulative += values[i];
+        cumulativeValues[i] = cumulative;
+    }
+
+    // Формируем финальные данные
+    QList<int> finalValues = (dataType == Count) ? values : cumulativeValues;
+
+    // Создаём серию на основе типа графика
     if (chartType == BarChart) {
-        QBarSet *barSet = new QBarSet("Клиенты");
-        for (int value : values) {
+        QBarSet *barSet = new QBarSet(dataType == Count ? "Клиентов" : "Накоплено");
+        for (int value : finalValues) {
             barSet->append(value);
         }
 
@@ -187,13 +225,15 @@ void Statistic::loadChartData(PeriodeMode mode, ChartType chartType) {
         series->append(barSet);
         chart->addSeries(series);
 
-        //series->attachAxis(axisX);
+        series->attachAxis(axisX);
         series->attachAxis(axisY);
 
-        // Подсказки при наведении
-        connect(barSet, &QBarSet::hovered, this, [this, barSet, fullDates, values](bool status, int index) {
+        connect(barSet, &QBarSet::hovered, this, [this, barSet, fullDates, finalValues, dataType](bool status, int index) {
             if (status && index >= 0 && index < fullDates.size()) {
-                QString tooltipText = QString("Дата: %1\nКлиентов: %2").arg(fullDates[index]).arg(values[index]);
+                QString tooltipText = QString("Период: %1\n%2: %3")
+                                          .arg(fullDates[index])
+                                          .arg(dataType == Count ? "Клиентов" : "Всего клиентов")
+                                          .arg(finalValues[index]);
                 QToolTip::showText(QCursor::pos(), tooltipText);
             } else {
                 QToolTip::hideText();
@@ -202,21 +242,23 @@ void Statistic::loadChartData(PeriodeMode mode, ChartType chartType) {
 
     } else if (chartType == LineChart) {
         QLineSeries *lineSeries = new QLineSeries();
+        lineSeries->setName(dataType == Count ? "Клиентов" : "Накоплено");
+
         for (int i = 0; i < fullDates.size(); ++i) {
-            lineSeries->append(i, values[i]);
+            lineSeries->append(i, finalValues[i]);
         }
 
         chart->addSeries(lineSeries);
-        lineSeries->setName("Клиенты");
-
-        //lineSeries->attachAxis(axisX);
+        lineSeries->attachAxis(axisX);
         lineSeries->attachAxis(axisY);
 
-        // Подсказки при наведении
-        connect(lineSeries, &QLineSeries::hovered, this, [this, fullDates, values](const QPointF &point, bool state) {
+        connect(lineSeries, &QLineSeries::hovered, this, [this, fullDates, finalValues, dataType](const QPointF &point, bool state) {
             int index = qRound(point.x());
             if (state && index >= 0 && index < fullDates.size()) {
-                QString tooltipText = QString("Дата: %1\nКлиентов: %2").arg(fullDates[index]).arg(values[index]);
+                QString tooltipText = QString("Период: %1\n%2: %3")
+                                          .arg(fullDates[index])
+                                          .arg(dataType == Count ? "Клиентов" : "Всего клиентов")
+                                          .arg(finalValues[index]);
                 QToolTip::showText(QCursor::pos(), tooltipText);
             } else {
                 QToolTip::hideText();
@@ -224,16 +266,27 @@ void Statistic::loadChartData(PeriodeMode mode, ChartType chartType) {
         });
     }
 
-    // Настраиваем ось X
+    // Настраиваем ось X (убираем подписи)
     for (int i = 0; i < fullDates.size(); ++i) {
         axisX->append(fullDates[i], i);
     }
 
+    axisX->setVisible(false); // ❌ Скрываем подписи на оси X
+
     // Настраиваем ось Y
-    int maxCount = std::max_element(values.begin(), values.end())[0];
+    int maxCount = std::max_element(finalValues.begin(), finalValues.end())[0];
     axisY->setRange(0, maxCount > 0 ? maxCount + 1 : 1);
     axisY->setLabelFormat("%d");
 
+    // Легенда
     chart->legend()->setVisible(true);
-    chart->setTitle("Рост клиентов (" + start.toString("dd.MM.yyyy") + " — " + end.toString("dd.MM.yyyy") + ")");
+
+    // Заголовок графика
+    chart->setTitle(
+        QString("%1 (%2)\n(%3 — %4)")
+            .arg(dataType == Count ? "Количество клиентов" : "Рост клиентов")
+            .arg(periodSelector->currentText())
+            .arg(start.toString("dd.MM.yyyy"))
+            .arg(end.addDays(-1).toString("dd.MM.yyyy"))
+        );
 }

@@ -31,6 +31,7 @@ void ClientWindow::setupUI()
 
     for (const FieldConfig &field : tableConfig.fieldConfigs) {
         if (field.tableDesc.isEmpty()) continue;
+        if (field.name.toLower() == "id") continue;
 
         QWidget *widget = nullptr;
         QString fieldType = field.format.toUpper();

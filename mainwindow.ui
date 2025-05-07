@@ -197,26 +197,6 @@
             <property name="rowWrapPolicy">
              <enum>QFormLayout::RowWrapPolicy::DontWrapRows</enum>
             </property>
-            <item row="0" column="0">
-             <widget class="QLabel" name="label">
-              <property name="text">
-               <string>TextLabel</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QLineEdit" name="lineEdit"/>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_2">
-              <property name="text">
-               <string>TextLabel</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QLineEdit" name="lineEdit_2"/>
-            </item>
            </layout>
           </item>
          </layout>
@@ -276,7 +256,6 @@
     <property name="title">
      <string>Файл</string>
     </property>
-    <addaction name="action"/>
     <addaction name="action_Excel"/>
     <addaction name="action_Excel_2"/>
     <addaction name="action_4"/>
@@ -299,16 +278,25 @@
    </property>
   </action>
   <action name="action_Excel">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Импортирвать из Excel таблицы </string>
    </property>
   </action>
   <action name="action_Excel_2">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Экспортировать в Excel таблицу</string>
    </property>
   </action>
   <action name="action_2">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Экспортировать файл конфигурации</string>
    </property>
@@ -319,11 +307,17 @@
    </property>
   </action>
   <action name="action_4">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Открыть базу клиентов</string>
    </property>
   </action>
   <action name="action_5">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Создать базу клиентов</string>
    </property>

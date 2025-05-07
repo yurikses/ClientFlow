@@ -206,14 +206,15 @@ bool Database::syncTableStructure(const QJsonObject &dbConfig) {
             QString name = query.value("name").toString().toLower(); // нормализуем регистр
             QString type = query.value("type").toString().toUpper();
             currentColumns.append({name, type});
+
         }
 
         QList<FieldConfig> expectedFields = extractFieldConfigs(columnsArray);
 
-        bool needsRecreate = (currentColumns.size() != expectedFields.size());
+        bool needsRecreate = (currentColumns.size()-1 != expectedFields.size());
 
         if (!needsRecreate) {
-            for (int i = 0; i < currentColumns.size(); ++i) {
+            for (int i = 0; i < currentColumns.size()-1; ++i) {
                 if (currentColumns[i].first != expectedFields[i].name.toLower() ||
                     currentColumns[i].second != expectedFields[i].format.toUpper()) {
                     needsRecreate = true;
@@ -289,6 +290,8 @@ bool Database::syncTableStructure(const QJsonObject &dbConfig) {
                 oldFields << "NULL"; // поле не найдено — оставляем NULL
             }
         }
+        newFields << "created_at";
+        oldFields << "created_at";
 
         QString copyData = QString("INSERT INTO %1 (%2) SELECT %3 FROM %4;")
                                .arg(newTableName, newFields.join(", "), oldFields.join(", "), tableName);

@@ -36,10 +36,15 @@ private:
         LineChart
     };
 
+    enum ChartDataType {
+        Count,
+        Growth
+    };
+
     QComboBox *periodSelector;
     QComboBox *chartTypeSelector; // <-- Новый контроллер
     QChartView *chartView;
-
+    QComboBox *dataTypeSelector;
     QChart *chart;
     QCategoryAxis *axisX;
     QValueAxis *axisY;
@@ -47,9 +52,11 @@ private:
     Database *database;
 
     void createUI();
-    void loadChartData(PeriodeMode mode, ChartType type); // <-- Изменили сигнатуру
+    void loadChartData(PeriodeMode mode, ChartType chartType, ChartDataType dataType); // <-- Изменили сигнатуру
     QDate getStartDateFromMode(PeriodeMode mode);
     bool isWeeklyInterval(PeriodeMode mode);
+    QStringList generateFullDateRange(const QDate &start, const QDate &end, bool weekly);
+
 };
 
 #endif // STATISTIC_H

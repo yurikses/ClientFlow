@@ -30,25 +30,42 @@ settingsdialog::settingsdialog(QWidget *parent)
         QTableWidgetItem *nameItem = new QTableWidgetItem(field.name);
         ui->tableWidget->setItem(row, 0, nameItem);
 
+        // Если это "id", блокируем редактирование
+        if (field.name == "id") {
+            nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEditable); // Запрещаем редактирование
+        }
+
         // Размер поля
         QTableWidgetItem *sizeItem = new QTableWidgetItem(QString::number(field.size));
         sizeItem->setTextAlignment(Qt::AlignCenter);
         ui->tableWidget->setItem(row, 1, sizeItem);
 
+        // Если это "id", также запрещаем изменение размера
+        if (field.name == "id") {
+            sizeItem->setFlags(sizeItem->flags() & ~Qt::ItemIsEditable);
+        }
+
         // Тип поля — комбобокс
         QComboBox *typeBox = new QComboBox();
-        typeBox->addItems({"INTEGER","INT", "TEXT", "DATE", "BOOLEAN"});
-        typeBox->setCurrentText(field.format); // Установка текущего типа
+        typeBox->addItems({"INTEGER", "INT", "TEXT", "DATE", "BOOLEAN"});
+        typeBox->setCurrentText(field.format);
+
+        // Если это "id", запрещаем выбор других вариантов кроме "INTEGER"
+        if (field.name == "id") {
+            typeBox->setEnabled(false); // Полностью блокируем выбор
+            typeBox->setCurrentText("INTEGER"); // Зафиксируем значение
+        }
+
         ui->tableWidget->setCellWidget(row, 2, typeBox);
 
         // Описание поля
         QTableWidgetItem *descItem = new QTableWidgetItem(field.tableDesc);
         ui->tableWidget->setItem(row, 3, descItem);
-    }
 
-    // Растягиваем все колонки
-    for (int col = 0; col < 4; ++col) {
-        ui->tableWidget->horizontalHeader()->setSectionResizeMode(col, QHeaderView::Stretch);
+        // Также запрещаем редактирование описания для id
+        if (field.name == "id") {
+            descItem->setFlags(descItem->flags() & ~Qt::ItemIsEditable);
+        }
     }
 }
 
