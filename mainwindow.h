@@ -34,6 +34,8 @@ private slots:
     void handleSettingsWindowAccepted();
     void loadDataFromList(QList<QMap<QString,QVariant>> data,QTableWidget *clientsTableWidget);
 
+    void on_action_4_triggered();
+
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();

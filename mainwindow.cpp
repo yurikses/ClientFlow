@@ -10,6 +10,7 @@
 #include <QJsonObject>
 #include <QMessageBox>
 #include <QDebug>
+#include <QFileDialog>
 #include "database.h"
 #include "statistic.h"
 #include "config.h"
@@ -184,3 +185,17 @@ void MainWindow::on_searchClientsButton_clicked()
         QMessageBox::critical(this, "Ошибка", "Ошибка поиска: " + e.text());
     }
 }
+
+void MainWindow::on_action_4_triggered()
+{
+    QString filePath = QFileDialog::getOpenFileName(this, "Выберите базу данных", "", "*.db *.sqlite");
+    if (filePath.isEmpty()) return;
+
+    if (dbManager->importExternalDatabase(filePath)) {
+        loadDataFromDatabase(clientsTableWidget);
+        QMessageBox::information(this, "Успех", "База данных успешно импортирована.");
+    } else {
+        QMessageBox::critical(this, "Ошибка", "Не удалось импортировать базу данных.");
+    }
+}
+

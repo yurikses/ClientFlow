@@ -6,6 +6,7 @@
 #include <QDateEdit>
 #include <QComboBox>
 #include <QMessageBox>
+#include <qpushbutton.h>
 
 ClientWindow::ClientWindow(const QString &tableName, Database *db, QWidget *parent)
     : QDialog(parent), tableName(tableName), database(db), clientId(-1)

@@ -8,8 +8,10 @@
 #include "database.h"
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QDir>
+#include <QFile>
 
-Database::Database(QObject *parent) : QObject(parent) {}
+Database::Database(QObject *parent) : QObject(parent) , config(Config::instance()){}
 
 Database::~Database() {
     closeConnection();
@@ -416,4 +418,99 @@ QVariantMap Database::selectRecord(const QString &table, int id) {
     }
 
     return {};
+}
+
+bool Database::importExternalDatabase(const QString &externalDbPath) {
+    // 1. Открываем внешнюю БД
+    QSqlDatabase externalDb = QSqlDatabase::addDatabase("QSQLITE", "import_connection");
+    externalDb.setDatabaseName(externalDbPath);
+
+    if (!externalDb.open()) {
+        qCritical() << "Не удалось открыть внешнюю базу данных:" << externalDb.lastError().text();
+        return false;
+    }
+
+    qDebug() << "Внешняя база данных открыта.";
+
+    // 2. Проверяем, есть ли таблица clients
+    if (!externalDb.tables().contains("clients")) {
+        qCritical() << "Таблица 'clients' не найдена во внешней базе.";
+        externalDb.close();
+        return false;
+    }
+
+    // 3. Получаем структуру таблицы clients
+    QSqlQuery query(externalDb);
+    if (!query.exec("PRAGMA table_info(clients)")) {
+        qCritical() << "Ошибка получения структуры таблицы clients";
+        externalDb.close();
+        return false;
+    }
+
+    QList<QPair<QString, QString>> columns; // имя - тип
+    while (query.next()) {
+        QString name = query.value("name").toString().toLower();
+        QString type = query.value("type").toString().toUpper();
+
+        if (name != "created_at") { // игнорируем created_at
+            columns.append({name, type});
+        }
+    }
+
+    // 4. Формируем новый config.json на основе структуры
+    QJsonArray columnsArray;
+    for (const auto &col : columns) {
+        QJsonObject columnObj;
+        columnObj["size"] = 50; // можно улучшить: определение по типу
+        columnObj["format"] = col.second;
+        columnObj["defaultValue"] = "";
+        columnObj["tableDesc"] = col.first; // временное описание
+        QJsonObject columnEntry;
+        columnEntry[col.first] = columnObj;
+        columnsArray.append(columnEntry);
+    }
+
+    QJsonObject dbConfig;
+    dbConfig["clients"] = columnsArray;
+
+    QJsonObject fullConfig;
+    fullConfig["db"] = dbConfig;
+
+    Config::instance().saveConfigFile(fullConfig); // сохраняем обновлённый конфиг
+    qDebug() << "Конфигурация успешно обновлена из внешней базы данных.";
+
+    // 5. Копируем внешнюю базу в локальную папку
+    db.close();
+    QDir appDir = QDir::current();
+    QString localDbPath = appDir.filePath("clients.db");
+
+    qDebug() << QFile::remove(localDbPath); // удаляем старую копию, если есть
+    if (!QFile::copy(externalDbPath, localDbPath)) {
+        qCritical() << "Не удалось скопировать базу данных в локальную папку.";
+        externalDb.close();
+        openConnection(localDbPath);
+        return false;
+    }
+
+    qDebug() << "База данных успешно импортирована и скопирована.";
+
+    externalDb.close();
+    QSqlDatabase::removeDatabase("import_connection");
+
+    // 6. Переподключаемся к локальной БД
+    if (!openConnection(localDbPath)) {
+        qCritical() << "Не удалось переподключиться к локальной копии базы данных.";
+        return false;
+    }
+
+    // 7. Создаём таблицы (если нужно)
+    dbConfig = config.getBDConfig();
+    if (!syncTableStructure(dbConfig)) {
+        qCritical() << "Не удалось синхронизировать структуру таблиц.";
+        return false;
+    }
+
+    qDebug() << "Структура таблиц успешно синхронизирована.";
+
+    return true;
 }

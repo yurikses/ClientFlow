@@ -179,7 +179,6 @@ void Statistic::loadChartData(PeriodeMode mode, ChartType chartType, ChartDataTy
         return;
     }
 
-    int cumulative = 0;
 
     while (query.next()) {
         QString key = query.value("period_key").toString();
@@ -203,9 +202,17 @@ void Statistic::loadChartData(PeriodeMode mode, ChartType chartType, ChartDataTy
         }
     }
 
+    int initialCount = 0;
+    QSqlQuery initQuery(database->getDb());
+    initQuery.prepare("SELECT COUNT(*) FROM clients WHERE created_at < :startDate");
+    initQuery.bindValue(":startDate", start.toString("yyyy-MM-dd"));
+    if (initQuery.exec() && initQuery.next()) {
+        initialCount = initQuery.value(0).toInt();
+    }
+
     // Считаем накопленный итог
     QList<int> cumulativeValues = values;
-    cumulative = 0;
+    int cumulative = initialCount; // ⬅️ Начинаем с уже существующих клиентов
     for (int i = 0; i < cumulativeValues.size(); ++i) {
         cumulative += values[i];
         cumulativeValues[i] = cumulative;

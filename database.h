@@ -35,8 +35,10 @@ public:
     bool updateRecord(const QString &table, int id, const QVariantMap &data);
     QVariantMap selectRecord(const QString &table, int id);
     QSqlDatabase getDb();
+    bool importExternalDatabase(const QString &externalDbPath);
 private:
     QSqlDatabase db;
+    Config &config;
 };
 
 #endif // DATABASE_H
