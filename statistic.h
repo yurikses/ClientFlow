@@ -42,7 +42,7 @@ private:
     };
 
     QComboBox *periodSelector;
-    QComboBox *chartTypeSelector; // <-- Новый контроллер
+    QComboBox *chartTypeSelector;
     QChartView *chartView;
     QComboBox *dataTypeSelector;
     QChart *chart;
@@ -52,7 +52,7 @@ private:
     Database *database;
 
     void createUI();
-    void loadChartData(PeriodeMode mode, ChartType chartType, ChartDataType dataType); // <-- Изменили сигнатуру
+    void loadChartData(PeriodeMode mode, ChartType chartType, ChartDataType dataType);
     QDate getStartDateFromMode(PeriodeMode mode);
     bool isWeeklyInterval(PeriodeMode mode);
     QStringList generateFullDateRange(const QDate &start, const QDate &end, bool weekly);

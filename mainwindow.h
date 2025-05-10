@@ -47,4 +47,4 @@ private:
     Config &config;
     Statistic *statisticTab;
 };
-#endif // MAINWINDOW_H
+#endif

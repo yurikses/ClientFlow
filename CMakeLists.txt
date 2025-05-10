@@ -10,6 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
+
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Charts)
 find_package(Qt6 REQUIRED COMPONENTS Core Sql Widgets Charts Gui)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
@@ -33,6 +34,13 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         clientwindow.ui
         settingsdialog.h settingsdialog.cpp settingsdialog.ui
         statistic.h statistic.cpp
+        validation/validationrule.cpp validation/validationrule.h
+        validation/notemptyrule.h validation/notemptyrule.cpp
+        validation/emailrule.h validation/emailrule.cpp
+        validation/minlengthrule.h validation/minlengthrule.cpp
+        validation/validatorconfigloader.h validation/validatorconfigloader.cpp
+        validationrulemodel.h validationrulemodel.cpp
+        validationruleeditor.h validationruleeditor.cpp
 
 
     )
