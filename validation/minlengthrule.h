@@ -7,7 +7,10 @@ class MinLengthRule : public ValidationRule {
     int minLength;
 public:
     explicit MinLengthRule(int length);
-    ValidationResult validate(const QString& value) const override;
+    QString getType() const override;
+    QVariant getValue() const override;
+    bool setValue(const QVariant& value) override;
+    bool validate(const QString& value) const override;
     QString getDescription() const override;
 };
 

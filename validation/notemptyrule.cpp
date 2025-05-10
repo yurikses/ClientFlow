@@ -1,10 +1,22 @@
 #include "notemptyrule.h"
 
-ValidationResult NotEmptyRule::validate(const QString& value) const {
+QString NotEmptyRule::getType() const {
+    return "notEmpty";
+}
+
+QVariant NotEmptyRule::getValue() const {
+    return {};
+}
+
+bool NotEmptyRule::setValue(const QVariant&) {
+    return false; // У этого правила нет параметров
+}
+
+bool NotEmptyRule::validate(const QString& value) const {
     if (value.trimmed().isEmpty()) {
-        return { false, "Поле не должно быть пустым" };
+        return false;
     }
-    return { true, "" };
+    return true;
 }
 
 QString NotEmptyRule::getDescription() const {

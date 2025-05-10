@@ -14,7 +14,10 @@ struct ValidationResult {
 class ValidationRule {
 public:
     virtual ~ValidationRule() = default;
-    virtual ValidationResult validate(const QString& value) const = 0;
+    virtual QString getType() const = 0;
+    virtual QVariant getValue() const = 0;
+    virtual bool setValue(const QVariant& value) = 0;
+    virtual bool validate(const QString& value) const = 0;
     virtual QString getDescription() const = 0;
 };
 

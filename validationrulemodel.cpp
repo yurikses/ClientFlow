@@ -1,4 +1,6 @@
 #include "validationrulemodel.h"
+#include <QVariant>
+#include <QDebug>
 
 ValidationRuleModel::ValidationRuleModel(QObject* parent)
     : QAbstractTableModel(parent) {}
@@ -29,8 +31,8 @@ QVariant ValidationRuleModel::data(const QModelIndex& index, int role) const {
     return {};
 }
 
-QVariant ValidationRuleModel::headerData(int section, Qt::Orientation, int role) const {
-    if (role == Qt::DisplayRole && section < headers.size())
+QVariant ValidationRuleModel::headerData(int section, Qt::Orientation orientation, int role) const {
+    if (role == Qt::DisplayRole && orientation == Qt::Horizontal && section < headers.size())
         return headers[section];
     return {};
 }
@@ -65,4 +67,14 @@ void ValidationRuleModel::removeRule(int index) {
 
 QList<ValidationRule*> ValidationRuleModel::getRules() const {
     return rules;
+}
+
+void ValidationRuleModel::setRules(const QList<ValidationRule*>& newRules) {
+    beginResetModel();
+    qDeleteAll(rules);
+    rules.clear();
+    for (auto rule : newRules) {
+        rules.append(rule);
+    }
+    endResetModel();
 }

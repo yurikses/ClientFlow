@@ -2,6 +2,7 @@
 #define CONFIG_H
 #include <QObject>
 #include <QJsonObject>
+#include "validation/validationrule.h"
 
 struct FieldConfig {
     QString name;
@@ -39,6 +40,8 @@ public:
     QJsonObject getBDConfig();
     static Config& instance();
     TableConfig getTableConfig(const QString &tableName);
+    QList<ValidationRule*> getValidationRulesForField(const QString& fieldName) const;
+    void saveValidationRules(const QString& fieldName, const QList<ValidationRule*>& rules);
 };
 
 #endif // CONFIG_H

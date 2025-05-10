@@ -4,6 +4,8 @@
 #include <QObject>
 #include <QJsonObject>
 #include <QMap>
+#include <QString>
+#include <QVariant>
 #include "validationrule.h"
 
 class ValidatorConfigLoader {

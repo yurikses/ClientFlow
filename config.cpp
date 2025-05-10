@@ -1,4 +1,7 @@
 #include "config.h"
+#include "validation/emailrule.h"
+#include "validation/minlengthrule.h"
+#include "validation/notemptyrule.h"
 #include <QFile>
 #include <QDebug>
 #include <QDir>
@@ -217,4 +220,64 @@ QList<QString> Config::getFieldDescForTable() {
     }
 
     return fieldNames;
+}
+
+QList<ValidationRule*> Config::getValidationRulesForField(const QString& fieldName) const
+{
+    QJsonObject dbObj = configFile.value("db").toObject();
+    QJsonArray columnsArray = dbObj.value("clients").toArray();
+
+    for (const QJsonValue& columnValue : columnsArray) {
+        QJsonObject columnEntry = columnValue.toObject();
+        for (const QString& columnName : columnEntry.keys()) {
+            if (columnName == fieldName) {
+                QJsonArray validationArray = columnEntry.value(fieldName).toObject().value("validation").toArray();
+                QList<ValidationRule*> rules;
+                for (const QJsonValue& ruleValue : validationArray) {
+                    QJsonObject ruleObj = ruleValue.toObject();
+                    QString type = ruleObj.value("type").toString();
+                    if (type == "notEmpty") {
+                        rules.append(new NotEmptyRule());
+                    } else if (type == "email") {
+                        rules.append(new EmailRule());
+                    } else if (type == "minLength") {
+                        int value = ruleObj.value("value").toInt();
+                        rules.append(new MinLengthRule(value));
+                    }
+                }
+                return rules;
+            }
+        }
+    }
+    return {};
+}
+
+void Config::saveValidationRules(const QString& fieldName, const QList<ValidationRule*>& rules)
+{
+    QJsonObject dbObj = configFile.value("db").toObject();
+    QJsonArray columnsArray = dbObj.value("clients").toArray();
+
+    for (QJsonValue columnValue : columnsArray) {
+        QJsonObject columnEntry = columnValue.toObject();
+        for (QString& columnName : columnEntry.keys()) {
+            if (columnName == fieldName) {
+                QJsonArray validationArray;
+                for (auto rule : rules) {
+                    QJsonObject ruleObj;
+                    ruleObj["type"] = rule->getType();
+                    if (rule->getType() == "minLength") {
+                        ruleObj["value"] = rule->getValue().toInt();
+                    }
+                    validationArray.append(ruleObj);
+                }
+                columnEntry.insert("validation", validationArray);
+                columnValue = columnEntry;
+                break;
+            }
+        }
+    }
+
+    dbObj["clients"] = columnsArray;
+    configFile["db"] = dbObj;
+    saveConfigFile(configFile);
 }

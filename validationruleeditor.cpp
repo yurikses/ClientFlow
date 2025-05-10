@@ -1,8 +1,13 @@
 #include "validationruleeditor.h"
+#include "validation/emailrule.h"
+#include "validation/minlengthrule.h"
+#include "validation/notemptyrule.h"
 #include <QFormLayout>
 #include <QDialog>
 #include <QComboBox>
 #include <QLineEdit>
+#include <QMessageBox>
+#include <QHeaderView>
 
 ValidationRuleEditor::ValidationRuleEditor(QWidget* parent) : QWidget(parent), model(this) {
     tableView = new QTableView(this);
@@ -27,12 +32,7 @@ ValidationRuleEditor::ValidationRuleEditor(QWidget* parent) : QWidget(parent), m
 }
 
 void ValidationRuleEditor::setRules(const QList<ValidationRule*>& rules) {
-    model.beginResetModel();
-    model.rules.clear();
-    for (auto rule : rules) {
-        model.addRule(rule);
-    }
-    model.endResetModel();
+    model.setRules(rules);
 }
 
 QList<ValidationRule*> ValidationRuleEditor::getRules() const {
