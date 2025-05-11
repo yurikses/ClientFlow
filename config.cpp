@@ -222,35 +222,21 @@ QList<QString> Config::getFieldDescForTable() {
     return fieldNames;
 }
 
-QList<ValidationRule*> Config::getValidationRulesForField(const QString& fieldName) const
-{
+QJsonObject Config::getValidationRulesForField(const QString& fieldName) const {
     QJsonObject dbObj = configFile.value("db").toObject();
     QJsonArray columnsArray = dbObj.value("clients").toArray();
 
     for (const QJsonValue& columnValue : columnsArray) {
         QJsonObject columnEntry = columnValue.toObject();
-        for (const QString& columnName : columnEntry.keys()) {
-            if (columnName == fieldName) {
-                QJsonArray validationArray = columnEntry.value(fieldName).toObject().value("validation").toArray();
-                QList<ValidationRule*> rules;
-                for (const QJsonValue& ruleValue : validationArray) {
-                    QJsonObject ruleObj = ruleValue.toObject();
-                    QString type = ruleObj.value("type").toString();
-                    if (type == "notEmpty") {
-                        rules.append(new NotEmptyRule());
-                    } else if (type == "email") {
-                        rules.append(new EmailRule());
-                    } else if (type == "minLength") {
-                        int value = ruleObj.value("value").toInt();
-                        rules.append(new MinLengthRule(value));
-                    }
-                }
-                return rules;
-            }
+        if (columnEntry.contains(fieldName)) {
+            QJsonObject fieldDetails = columnEntry.value(fieldName).toObject();
+            return fieldDetails.value("validation").toObject();
         }
     }
     return {};
 }
+
+
 
 void Config::saveValidationRules(const QString& fieldName, const QList<ValidationRule*>& rules)
 {
@@ -281,7 +267,44 @@ void Config::saveValidationRules(const QString& fieldName, const QList<Validatio
     configFile["db"] = dbObj;
     saveConfigFile(configFile);
 }
-QJsonObject Config::getValidationRulesConfig() const {
+QJsonObject Config::getValidationRules() const {
     return configFile.value("validationRules").toObject();
+}
+QJsonObject Config::getValidationRulesConfig() const {
+    QJsonObject result;
+    QJsonObject dbObj = configFile.value("db").toObject();
+    QJsonArray columnsArray = dbObj.value("clients").toArray();
+
+    for (const QJsonValue& columnValue : columnsArray) {
+        QJsonObject columnEntry = columnValue.toObject();
+        for (const QString& columnName : columnEntry.keys()) {
+            QJsonObject columnDetails = columnEntry.value(columnName).toObject();
+            QJsonArray validationArray = columnDetails.value("validation").toArray();
+            if (!validationArray.isEmpty()) {
+                result[columnName] = validationArray;
+            }
+        }
+    }
+    return result;
+}
+
+void Config::setValidationRulesConfig(const QJsonObject& validation) {
+    QJsonObject dbObj = configFile.value("db").toObject();
+    QJsonArray columnsArray = dbObj.value("clients").toArray();
+
+    for (int i = 0; i < columnsArray.size(); ++i) {
+        QJsonObject columnEntry = columnsArray[i].toObject();
+        for (const QString& columnName : columnEntry.keys()) {
+            QJsonObject columnDetails = columnEntry.value(columnName).toObject();
+            if (validation.contains(columnName)) {
+                columnDetails["validation"] = validation.value(columnName).toArray();
+            }
+            columnEntry[columnName] = columnDetails;
+            columnsArray[i] = columnEntry;
+        }
+    }
+
+    dbObj["clients"] = columnsArray;
+    configFile["db"] = dbObj; // обновляем JSON
 }
 

@@ -146,9 +146,9 @@
           </layout>
          </item>
          <item row="2" column="0">
-          <widget class="QListView" name="validationRulesTableView">
+          <widget class="QTableWidget" name="validationRulesTableWidget">
            <property name="editTriggers">
-            <set>QAbstractItemView::EditTrigger::DoubleClicked</set>
+            <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
            </property>
            <property name="tabKeyNavigation">
             <bool>false</bool>

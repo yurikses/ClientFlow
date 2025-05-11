@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <QJsonObject>
 #include <qstandarditemmodel.h>
+#include <qtablewidget>
 #include "validation/validationrule.h"
 namespace Ui {
 class settingsdialog;
@@ -25,7 +26,7 @@ private slots:
     void updateConfigFile();
     void on_addValidationRuleButton_clicked();
     void on_removeValidationRuleButton_clicked();
-    void on_validationRulesTableView_doubleClicked(const QModelIndex&);
+    void on_validationRulesTableWidget_cellDoubleClicked(int row, int column);
 
 private:
     Ui::settingsdialog *ui;
@@ -39,7 +40,7 @@ private:
 
     // Метод для установки правил валидации в таблицу
     void setValidationRules(const QList<ValidationRule*>& rules);
-
+    void saveValidationRulesToConfig();
     // Метод для сохранения правил валидации в JSON
     void saveValidationRules(QJsonObject& dbObj) const;
 };

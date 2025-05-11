@@ -40,9 +40,13 @@ public:
     QJsonObject getBDConfig();
     static Config& instance();
     TableConfig getTableConfig(const QString &tableName);
-    QList<ValidationRule*> getValidationRulesForField(const QString& fieldName) const;
+   // QList<ValidationRule*> getValidationRules(const QString& fieldName) const;
     void saveValidationRules(const QString& fieldName, const QList<ValidationRule*>& rules);
-    QJsonObject getValidationRulesConfig() const;
+    QJsonObject getValidationRulesForField(const QString& fieldName) const;
+    void setValidationRulesForField(const QString& fieldName, const QList<ValidationRule*>& rules);
+    QJsonObject getValidationRulesConfig() const; // Получает правила из JSON
+    void setValidationRulesConfig(const QJsonObject& validation); // Устанавливает правила
+    QJsonObject getValidationRules() const ;
 
 };
 
