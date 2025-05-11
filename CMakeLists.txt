@@ -41,6 +41,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         validation/validatorconfigloader.h validation/validatorconfigloader.cpp
         validationrulemodel.h validationrulemodel.cpp
         validationruleeditor.h validationruleeditor.cpp
+        validationruledialog.h validationruledialog.cpp
 
 
     )

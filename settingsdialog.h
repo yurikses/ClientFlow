@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include <QJsonObject>
+#include <qstandarditemmodel.h>
 #include "validation/validationrule.h"
 namespace Ui {
 class settingsdialog;
@@ -22,9 +23,16 @@ private slots:
     void on_pushButton_2_clicked(); // Отмена
     void on_pushButton_clicked();   // Сохранить
     void updateConfigFile();
+    void on_addValidationRuleButton_clicked();
+    void on_removeValidationRuleButton_clicked();
+    void on_validationRulesTableView_doubleClicked(const QModelIndex&);
 
 private:
     Ui::settingsdialog *ui;
+    QJsonObject currentValidationRules;
+    QStandardItemModel *validationModel;
+
+    void updateValidationRulesTable();
 
     // Метод для получения текущих правил валидации из таблицы
     QList<ValidationRule*> getValidationRules() const;

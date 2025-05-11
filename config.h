@@ -42,6 +42,8 @@ public:
     TableConfig getTableConfig(const QString &tableName);
     QList<ValidationRule*> getValidationRulesForField(const QString& fieldName) const;
     void saveValidationRules(const QString& fieldName, const QList<ValidationRule*>& rules);
+    QJsonObject getValidationRulesConfig() const;
+
 };
 
 #endif // CONFIG_H

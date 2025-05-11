@@ -281,3 +281,7 @@ void Config::saveValidationRules(const QString& fieldName, const QList<Validatio
     configFile["db"] = dbObj;
     saveConfigFile(configFile);
 }
+QJsonObject Config::getValidationRulesConfig() const {
+    return configFile.value("validationRules").toObject();
+}
+
