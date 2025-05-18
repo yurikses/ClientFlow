@@ -14,15 +14,13 @@
 #include <QStandardItemModel>
 settingsdialog::settingsdialog(QWidget *parent)
     : QDialog(parent)
-    , ui(new Ui::settingsdialog)
+    , ui(new Ui::settingsdialog), config(Config::instance())
 {
     ui->setupUi(this);
-
-    Config &config = Config::instance();
     TableConfig clientTableConfig = config.getTableConfig("clients");
 
     // Устанавливаем количество строк и столбцов
-    ui->tableWidget->setColumnCount(5); // Добавляем столбец для валидации
+    ui->tableWidget->setColumnCount(4); // Добавляем столбец для валидации
     ui->tableWidget->setRowCount(clientTableConfig.fieldConfigs.size());
 
     // Заголовки таблицы
@@ -55,7 +53,7 @@ settingsdialog::settingsdialog(QWidget *parent)
     }
 
     // Растягиваем все колонки
-    for (int col = 0; col < 5; ++col) {
+    for (int col = 0; col < 4; ++col) {
         ui->tableWidget->horizontalHeader()->setSectionResizeMode(col, QHeaderView::Stretch);
     }
 
@@ -95,19 +93,36 @@ void settingsdialog::on_addNewFieldButton_clicked()
     QTableWidgetItem *descItem = new QTableWidgetItem("");
     ui->tableWidget->setItem(rowCount, 3, descItem);
 
-    // Правила валидации
-    ValidationRuleEditor *validatorEditor = new ValidationRuleEditor();
-    ui->tableWidget->setCellWidget(rowCount, 4, validatorEditor);
 
     // Растягиваем все колонки
-    for (int col = 0; col < 5; ++col) {
+    for (int col = 0; col < 4; ++col) {
         ui->tableWidget->horizontalHeader()->setSectionResizeMode(col, QHeaderView::Stretch);
     }
 }
 
 void settingsdialog::on_delFieldButton_clicked()
 {
-    // Реализуйте удаление выбранной строки
+    // Получаем индекс текущей выбранной строки
+    int currentRow = ui->tableWidget->currentRow();
+
+    // Проверяем, что строка выбрана
+    if (currentRow < 0) {
+        QMessageBox::warning(this, "Ошибка", "Выберите поле для удаления.");
+        return;
+    }
+
+    // Запрашиваем подтверждение удаления
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this,
+        "Подтверждение",
+        "Вы действительно хотите удалить это поле?",
+        QMessageBox::Yes | QMessageBox::No
+        );
+
+    if (reply == QMessageBox::Yes) {
+        // Удаляем строку из таблицы
+        ui->tableWidget->removeRow(currentRow);
+    }
 }
 
 void settingsdialog::on_pushButton_2_clicked()
@@ -118,13 +133,12 @@ void settingsdialog::on_pushButton_2_clicked()
 void settingsdialog::on_pushButton_clicked()
 {
     updateConfigFile();
-
+    // saveValidationRulesToConfig();
     QMessageBox::information(this, "Успех", "Настройки сохранены.");
     accept();
 }
 
 void settingsdialog::updateConfigFile() {
-    Config &config = Config::instance();
     QJsonObject dbObj = config.getBDConfig().value("db").toObject();
     QString tableName = "clients";
 
@@ -141,18 +155,50 @@ void settingsdialog::updateConfigFile() {
 
         QString format = static_cast<QComboBox*>(ui->tableWidget->cellWidget(row, 2))->currentText();
         QString tableDesc = ui->tableWidget->item(row, 3) ? ui->tableWidget->item(row, 3)->text() : "";
+        QString originalName = config.getFieldNamesForTable().value(row); // исходное имя до изменений
+        QStringList existingOldNames;
 
-        // Формируем JSON объект
+        // Получаем существующие oldNames из конфига для этого поля
+        const FieldConfig &existingField = config.getTableConfig("clients").fieldConfigs.value(row);
+        if (!existingField.name.isEmpty()) {
+            existingOldNames = existingField.oldNames;
+        }
+
+        // Проверяем, было ли поле переименовано
+        QStringList newOldNames = existingOldNames;
+
+        if (!originalName.isEmpty() && !columnName.isEmpty()) {
+            if (originalName != columnName) {
+                // Добавляем только если новое имя отличается от оригинала
+                if (!newOldNames.contains(originalName)) {
+                    newOldNames.append(originalName);
+                }
+            } else {
+                // Если вернули старое имя — не добавляем его в oldNames снова
+                // но сохраняем существующую историю
+            }
+        }
+
         QJsonObject columnObj;
         columnObj["size"] = size;
         columnObj["format"] = format;
         columnObj["defaultValue"] = "";
         columnObj["tableDesc"] = tableDesc;
 
-        // Добавляем валидацию
-        if (currentValidationRules.contains(columnName)) {
-            columnObj["validation"] = currentValidationRules.value(columnName).toArray();
+        // Сохраняем правила валидации
+        QJsonArray validationRules = config.getFieldValidation(columnName);
+        if (!validationRules.isEmpty()) {
+            columnObj["validation"] = validationRules;
         }
+
+        if (!newOldNames.isEmpty()) {
+            QJsonArray oldNamesArray;
+            for (const QString &name : newOldNames) {
+                oldNamesArray.append(name);
+            }
+            columnObj["oldNames"] = oldNamesArray;
+        }
+
 
         QJsonObject columnEntry;
         columnEntry[columnName] = columnObj;
@@ -160,8 +206,9 @@ void settingsdialog::updateConfigFile() {
     }
 
     dbObj[tableName] = columnsArray;
-    config.saveConfigFile(dbObj);
-    qDebug() << "Конфигурация успешно обновлена.";
+    QJsonObject jsonFile;
+    jsonFile["db"] = dbObj;
+    config.saveConfigFile(jsonFile);
 }
 
 
@@ -171,39 +218,35 @@ void settingsdialog::updateValidationRulesTable() {
     ui->validationRulesTableWidget->setColumnCount(2);
     ui->validationRulesTableWidget->setHorizontalHeaderLabels({"Поле", "Правила"});
 
-    // Получаем список всех полей из основной таблицы
-    QList<QString> fieldNames;
-    for (int row = 0; row < ui->tableWidget->rowCount(); ++row) {
-        QTableWidgetItem* nameItem = ui->tableWidget->item(row, 0);
-        if (nameItem) {
-            fieldNames << nameItem->text();
-        }
-    }
-
-    // Обновляем правила для всех полей
-    for (const QString& field : fieldNames) {
+    QStringList allFields = config.getFieldNamesForTable();
+    for (const QString& field : allFields) {
         int row = ui->validationRulesTableWidget->rowCount();
         ui->validationRulesTableWidget->insertRow(row);
 
-        // Получаем правила из currentValidationRules
-        QJsonArray rules = currentValidationRules.value(field).toArray();
+        // Получаем правила из конфига
+        QJsonArray validationObj = config.getFieldValidation(field);
+        QJsonArray validationArray = validationObj.isEmpty() ? QJsonArray() :validationObj;
 
         // Формируем строку с описанием правил
         QStringList ruleDescriptions;
-        for (const QJsonValue& ruleVal : rules) {
-            QJsonObject ruleObj = ruleVal.toObject();
-            QString type = ruleObj.value("type").toString();
+        for (const QJsonValue& val : validationArray) {
+            QJsonObject rule = val.toObject();
+            QString type = rule.value("type").toString();
             if (type == "notEmpty") {
-                ruleDescriptions << "Не пустое";
+                ruleDescriptions << "Не может быть пустым";
             } else if (type == "email") {
                 ruleDescriptions << "Email";
             } else if (type == "minLength") {
-                int length = ruleObj.value("value").toInt();
-                ruleDescriptions << QString("Мин. длина %1").arg(length);
+                int length = rule.value("value").toInt();
+                ruleDescriptions << QString("Минимальная длина %1").arg(length);
+            } else if (type == "onlySymbols") {
+                ruleDescriptions << "Только буквы";
+            } else if (type == "onlyNums") {
+                ruleDescriptions << "Только цифры";
             }
+
         }
 
-        // Устанавливаем значения в таблицу
         QTableWidgetItem* fieldItem = new QTableWidgetItem(field);
         QTableWidgetItem* rulesItem = new QTableWidgetItem(ruleDescriptions.join(", "));
         fieldItem->setFlags(fieldItem->flags() & ~Qt::ItemIsEditable); // только чтение
@@ -213,104 +256,53 @@ void settingsdialog::updateValidationRulesTable() {
         ui->validationRulesTableWidget->setItem(row, 1, rulesItem);
     }
 
-    // Растягиваем колонки
+    // Растягиваем таблицу
     for (int col = 0; col < 2; ++col) {
         ui->validationRulesTableWidget->horizontalHeader()->setSectionResizeMode(col, QHeaderView::Stretch);
     }
 }
 
-void settingsdialog::on_addValidationRuleButton_clicked() {
-    QStringList allFields = Config::instance().getFieldNamesForTable();
-    ValidationRuleDialog dialog(allFields);
 
-    if (dialog.exec() == QDialog::Accepted) {
-        QString field = dialog.getSelectedField();
-        QList<ValidationRule*> rules = dialog.getRules();
 
-        // Сохраняем временно в currentValidationRules
-        QJsonArray ruleArray;
-        for (auto rule : rules) {
-            QJsonObject ruleObj;
-            ruleObj["type"] = rule->getType();
-            if (rule->getType() == "minLength") {
-                ruleObj["value"] = rule->getValue().toInt();
-            }
-            ruleArray.append(ruleObj);
-        }
-        currentValidationRules[field] = ruleArray;
-        updateValidationRulesTable();
-    }
-}
+// void settingsdialog::saveValidationRulesToConfig() {
+//     QJsonObject dbObj = config.getBDConfig();
+//     QJsonArray columnsArray = dbObj.value("clients").toArray();
 
-void settingsdialog::on_removeValidationRuleButton_clicked() {
-    QModelIndex index = ui->validationRulesTableWidget->currentIndex();
-    if (!index.isValid()) return;
+//     for (int i = 0; i < columnsArray.size(); ++i) {
+//         QJsonObject columnEntry = columnsArray[i].toObject();
+//         for (const QString& columnName : columnEntry.keys()) {
+//             QJsonObject columnDetails = columnEntry.value(columnName).toObject();
 
-    QString field = ui->validationRulesTableWidget->item(index.row(), 0)->text();
-    currentValidationRules.remove(field); // Удаляем правило
-    updateValidationRulesTable();
-}
+//             // Удаляем старые правила
+//             columnDetails.remove("validation");
 
-void settingsdialog::saveValidationRulesToConfig() {
-    QJsonObject dbObj = Config::instance().getBDConfig().value("db").toObject();
-    QJsonArray columnsArray = dbObj.value("clients").toArray();
+//             // Добавляем новые из currentValidationRules
+//             if (currentValidationRules.contains(columnName)) {
+//                 columnDetails["validation"] = currentValidationRules[columnName].toArray();
+//             }
 
-    for (int i = 0; i < columnsArray.size(); ++i) {
-        QJsonObject columnEntry = columnsArray[i].toObject();
-        for (const QString& columnName : columnEntry.keys()) {
-            QJsonObject columnDetails = columnEntry.value(columnName).toObject();
+//             columnEntry[columnName] = columnDetails;
+//             columnsArray[i] = columnEntry;
+//         }
+//     }
 
-            // Удаляем старые правила
-            columnDetails.remove("validation");
-
-            // Добавляем новые из currentValidationRules
-            if (currentValidationRules.contains(columnName)) {
-                columnDetails["validation"] = currentValidationRules[columnName].toArray();
-            }
-
-            columnEntry[columnName] = columnDetails;
-            columnsArray[i] = columnEntry;
-        }
-    }
-
-    dbObj["clients"] = columnsArray;
-    Config::instance().saveConfigFile(dbObj);
-    qDebug() << "Правила валидации сохранены в файл.";
-}
+//     dbObj["clients"] = columnsArray;
+//     QJsonObject jsonFile;
+//     jsonFile["db"] = dbObj;
+//     config.saveConfigFile(jsonFile);
+//     qDebug() << "Правила валидации сохранены в файл.";
+// }
 
 
 void settingsdialog::on_validationRulesTableWidget_cellDoubleClicked(int row, int) {
     QString field = ui->validationRulesTableWidget->item(row, 0)->text();
-    QJsonArray ruleArray = currentValidationRules.value(field).toArray();
+    QJsonArray currentRules = config.getFieldValidation(field);
 
-    // Преобразуем в список правил
-    QList<ValidationRule*> existingRules;
-    for (const QJsonValue& val : ruleArray) {
-        QJsonObject obj = val.toObject();
-        QString type = obj.value("type").toString();
-        if (type == "notEmpty") {
-            existingRules.append(new NotEmptyRule());
-        } else if (type == "email") {
-            existingRules.append(new EmailRule());
-        } else if (type == "minLength") {
-            existingRules.append(new MinLengthRule(obj.value("value").toInt()));
-        }
-    }
 
-    // Открываем диалог редактирования
-    ValidationRuleDialog dialog(Config::instance().getFieldNamesForTable(), field, existingRules);
+    ValidationRuleDialog dialog(field, currentRules);
     if (dialog.exec() == QDialog::Accepted) {
-        QJsonArray updatedRules;
-        for (auto rule : dialog.getRules()) {
-            QJsonObject ruleObj;
-            ruleObj["type"] = rule->getType();
-            if (rule->getType() == "minLength") {
-                ruleObj["value"] = rule->getValue().toInt();
-            }
-            updatedRules.append(ruleObj);
-        }
-        currentValidationRules[field] = updatedRules;
-        updateValidationRulesTable();
+        config.setFieldValidation(field, dialog.getRules());
+        updateValidationRulesTable(); // обновляем интерфейс
     }
 }
 

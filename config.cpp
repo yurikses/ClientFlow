@@ -111,6 +111,21 @@ QJsonObject Config::loadConfigFile() {
     return jsonDoc.object();
 }
 
+QString Config::getFildDescByName(const QString& FieldName){
+    QJsonObject dbObj = configFile.value("db").toObject();
+    QJsonArray columnsArray = dbObj.value("clients").toArray();
+
+    for (const QJsonValue &columnValue : columnsArray) {
+        QJsonObject columnEntry = columnValue.toObject();
+        for (const QString &columnName : columnEntry.keys()) {
+            if(columnName == FieldName){
+                QJsonObject columnDetails = columnEntry.value(columnName).toObject();
+                return columnDetails.value("tableDesc").toString();
+            }
+
+        }
+    }
+}
 
 TableConfig Config::getTableConfig(const QString &tableName) {
     TableConfig tableConfig;
@@ -135,6 +150,16 @@ TableConfig Config::getTableConfig(const QString &tableName) {
                 QJsonArray oldNamesArray = columnDetails.value("oldNames").toArray();
                 for (const QJsonValue &val : oldNamesArray) {
                     field.oldNames.append(val.toString());
+                }
+
+                // 🔥 Парсим правила валидации
+                QJsonArray validationArray = columnDetails.value("validation").toArray();
+                for (const QJsonValue &valRule : validationArray) {
+                    QJsonObject ruleObj = valRule.toObject();
+                    QString ruleType = ruleObj.value("type").toString();
+                    QVariant ruleValue = ruleObj.value("value").toVariant();
+
+                    field.validationRules.append({ruleType, ruleValue});
                 }
 
                 tableConfig.fieldConfigs.append(field);
@@ -306,5 +331,59 @@ void Config::setValidationRulesConfig(const QJsonObject& validation) {
 
     dbObj["clients"] = columnsArray;
     configFile["db"] = dbObj; // обновляем JSON
+}
+
+QJsonArray Config::getFieldValidation(const QString& fieldName) const {
+    QJsonArray result;
+    QJsonObject dbObj = configFile.value("db").toObject();
+    QJsonArray columnsArray = dbObj.value("clients").toArray();
+
+    qDebug() << "Проверка валидации для поля:" << fieldName;
+
+    for (const QJsonValue& columnValue : columnsArray) {
+        QJsonObject columnEntry = columnValue.toObject();
+        if (columnEntry.contains(fieldName)) {
+            QJsonObject fieldDetails = columnEntry.value(fieldName).toObject();
+
+            qDebug() << "Поле найдено в конфиге:" << fieldName;
+            qDebug() << "Данные поля:" << fieldDetails;
+
+            // Проверяем, существует ли "validation"
+            if (fieldDetails.contains("validation")) {
+                QJsonValue validationValue = fieldDetails.value("validation");
+                if (validationValue.isArray()) {
+                    result = validationValue.toArray();
+                    qDebug() << "Правила валидации найдены:" << result;
+                } else {
+                    qDebug() << "Ошибка: 'validation' не является массивом в поле" << fieldName;
+                }
+            } else {
+                qDebug() << "Поле" << fieldName << "не имеет правил валидации.";
+            }
+
+            break;
+        }
+    }
+
+    return result;
+}
+
+void Config::setFieldValidation(const QString& fieldName, const QJsonArray& validation) {
+    QJsonObject dbObj = configFile.value("db").toObject();
+    QJsonArray columnsArray = dbObj.value("clients").toArray();
+
+    for (int i = 0; i < columnsArray.size(); ++i) {
+        QJsonObject columnEntry = columnsArray[i].toObject();
+        if (columnEntry.contains(fieldName)) {
+            QJsonObject fieldDetails = columnEntry.value(fieldName).toObject();
+            fieldDetails["validation"] = validation;
+            columnEntry[fieldName] = fieldDetails;
+            columnsArray[i] = columnEntry;
+            break;
+        }
+    }
+
+    dbObj["clients"] = columnsArray;
+    configFile["db"] = dbObj;
 }
 

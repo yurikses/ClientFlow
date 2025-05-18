@@ -6,13 +6,14 @@
 
 struct FieldConfig {
     QString name;
-    QStringList oldNames;
-    QString format;
-    int size;
-    QString defaultValue;
     QString tableDesc;
+    QString format;
+    int size = 0;
+    QString defaultValue;
+    QStringList oldNames;
 
-    FieldConfig() : size(0) {}
+    // Список правил валидации
+    QList<QPair<QString, QVariant>> validationRules; // {"minLength", 12}, {"notEmpty", {}}
 };
 
 struct TableConfig {
@@ -35,6 +36,7 @@ public:
 
     QList<QString> getBDlist();
     void importJsonFile();
+    QString getFildDescByName(const QString& FieldName);
     QList<QString> getFieldNamesForTable();
     QList<QString> getFieldDescForTable();
     QJsonObject getBDConfig();
@@ -46,6 +48,8 @@ public:
     void setValidationRulesForField(const QString& fieldName, const QList<ValidationRule*>& rules);
     QJsonObject getValidationRulesConfig() const; // Получает правила из JSON
     void setValidationRulesConfig(const QJsonObject& validation); // Устанавливает правила
+    QJsonArray getFieldValidation(const QString& fieldName) const;
+    void setFieldValidation(const QString& fieldName, const QJsonArray& validation);
     QJsonObject getValidationRules() const ;
 
 };

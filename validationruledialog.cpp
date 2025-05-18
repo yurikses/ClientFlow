@@ -1,50 +1,54 @@
 #include "validationruledialog.h"
-#include "validation/emailrule.h"
-#include "validation/minlengthrule.h"
-#include "validation/notemptyrule.h"
 #include <QFormLayout>
-#include <QLabel>
 #include <QHBoxLayout>
-#include <qlineedit.h>
-#include <qpushbutton.h>
+#include <QLabel>
+#include <QPushButton>
+#include <QJsonObject>
+ValidationRuleDialog::ValidationRuleDialog(const QString& field, const QJsonArray& currentRules, QWidget* parent)
+    : QDialog(parent), selectedField(field) {
 
-ValidationRuleDialog::ValidationRuleDialog(const QStringList& availableFields,
-                                           const QString& currentField,
-                                           const QList<ValidationRule*>& rules,
-                                           QWidget* parent)
-    : QDialog(parent), fields(availableFields) {
+    setWindowTitle(QString("Настройка валидации для '%1'").arg(field));
 
-    setWindowTitle("Настройка валидации");
-
-    fieldSelector = new QComboBox(this);
-    fieldSelector->addItems(fields);
-    if (!currentField.isEmpty()) {
-        fieldSelector->setCurrentText(currentField);
-    }
-
-    notEmptyCheckbox = new QCheckBox("Не пустое");
+    // Инициализация элементов
+    notEmptyCheckbox = new QCheckBox("Не может быть пустым");
     emailCheckbox = new QCheckBox("Email");
+    onlyLettersCheckbox = new QCheckBox("Только буквы");
+    onlyNumsCheckbox = new QCheckBox("Только числа");
     minLengthInput = new QLineEdit();
     minLengthInput->setPlaceholderText("Минимальная длина");
 
-    for (auto rule : rules) {
-        if (rule->getType() == "notEmpty") {
+    // Загрузка существующих правил
+    for (const QJsonValue& val : currentRules) {
+        QJsonObject rule = val.toObject();
+        QString type = rule.value("type").toString();
+
+        if (type == "notEmpty") {
             notEmptyCheckbox->setChecked(true);
-        } else if (rule->getType() == "email") {
+        } else if (type == "email") {
             emailCheckbox->setChecked(true);
-        } else if (rule->getType() == "minLength") {
-            minLengthInput->setText(rule->getValue().toString());
+        } else if (type == "minLength") {
+            minLengthInput->setText(QString::number(rule.value("value").toDouble()));
+        } else if (type == "onlySymbols") {
+            onlyLettersCheckbox->setChecked(true);
+        } else if (type == "onlyNums") {
+            onlyNumsCheckbox->setChecked(true);
         }
     }
 
     setupUI();
 }
 
+ValidationRuleDialog::~ValidationRuleDialog() {
+    // Удалять не нужно, так как Qt автоматически удаляет виджеты
+}
+
 void ValidationRuleDialog::setupUI() {
     QFormLayout* form = new QFormLayout();
-    form->addRow("Поле:", fieldSelector);
-    form->addRow("Не пустое", notEmptyCheckbox);
-    form->addRow("Email", emailCheckbox);
+    form->addRow(new QLabel(QString("Поле: %1").arg(selectedField)));
+    form->addRow(notEmptyCheckbox);
+    form->addRow(onlyLettersCheckbox);
+    form->addRow(onlyNumsCheckbox);
+    form->addRow(emailCheckbox);
     form->addRow("Минимальная длина", minLengthInput);
 
     QHBoxLayout* buttons = new QHBoxLayout();
@@ -62,24 +66,36 @@ void ValidationRuleDialog::setupUI() {
     connect(cancelBtn, &QPushButton::clicked, this, &QDialog::reject);
 }
 
-QString ValidationRuleDialog::getSelectedField() const {
-    return fieldSelector->currentText();
-}
+QJsonArray ValidationRuleDialog::getRules() const {
+    QJsonArray result;
 
-QList<ValidationRule*> ValidationRuleDialog::getRules() const {
-    QList<ValidationRule*> result;
-
+    // Не пустое
     if (notEmptyCheckbox->isChecked()) {
-        result.append(new NotEmptyRule());
+        result.append(QJsonObject{{"type", "notEmpty"}});
     }
+
+    // Email
     if (emailCheckbox->isChecked()) {
-        result.append(new EmailRule());
+        result.append(QJsonObject{{"type", "email"}});
     }
+    //onlySymbol
+    if (onlyLettersCheckbox->isChecked() && !onlyNumsCheckbox->isChecked()) {
+        result.append(QJsonObject{{"type", "onlySymbols"}});
+    }
+    //onlyNums
+    if (onlyNumsCheckbox->isChecked()) {
+        result.append(QJsonObject{{"type", "onlyNums"}});
+    }
+    // Минимальная длина
     bool ok;
     int minLength = minLengthInput->text().toInt(&ok);
     if (ok && minLength > 0) {
-        result.append(new MinLengthRule(minLength));
+        result.append(QJsonObject{{"type", "minLength"}, {"value", minLength}});
     }
 
     return result;
+}
+
+QString ValidationRuleDialog::getSelectedField() const {
+    return selectedField;
 }

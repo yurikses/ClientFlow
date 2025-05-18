@@ -17,10 +17,11 @@ private:
     void setupUI();
     void populateFields(int id);
     void saveClient();
+    bool validateFields();
     QString tableName;
     int clientId = -1;
     Database *database;
-
+    QMap<QString,QVector<ValidationRule*>> fieldValidators;
     QMap<QString, QWidget*> fieldWidgets; // для доступа к полям по имени
 };
 

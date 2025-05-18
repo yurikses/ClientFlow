@@ -1,4 +1,9 @@
 #include "clientwindow.h"
+#include "validation/OnlyNumsRule.h"
+#include "validation/OnlySymbolsRule.h"
+#include "validation/emailrule.h"
+#include "validation/minlengthrule.h"
+#include "validation/notemptyrule.h"
 #include <QFormLayout>
 #include <QVBoxLayout>
 #include <QDialogButtonBox>
@@ -57,6 +62,35 @@ void ClientWindow::setupUI()
         if (widget) {
             formLayout->addRow(field.tableDesc + ":", widget);
             fieldWidgets[field.name] = widget;
+
+            // Установка правил валидации
+            for (const auto &rulePair : field.validationRules) {
+                QString ruleType = rulePair.first;
+                QVariant ruleValue = rulePair.second;
+
+                ValidationRule* rule = nullptr;
+
+                if (ruleType == "notEmpty") {
+                    rule = new NotEmptyRule();
+                } else if (ruleType == "email") {
+                    rule = new EmailRule();
+                } else if (ruleType == "minLength") {
+                    bool ok;
+                    int minLength = ruleValue.toInt(&ok);
+                    if (ok && minLength > 0) {
+                        rule = new MinLengthRule(minLength);
+                    }
+                }else if (ruleType == "onlySymbols") {
+                    rule = new OnlySymbolsRule();
+                }
+
+                else if (ruleType == "onlyNums") {
+                    rule = new OnlyNumsRule();
+                }
+                if (rule) {
+                    fieldValidators[field.name].push_back(rule);
+                }
+            }
         }
     }
 
@@ -97,8 +131,49 @@ void ClientWindow::populateFields(int id)
     }
 }
 
+bool ClientWindow::validateFields()
+{
+    Config &config = Config::instance();
+
+    for (auto it = fieldValidators.begin(); it != fieldValidators.end(); ++it) {
+        QString fieldName = it.key();
+        QList<ValidationRule*> rules = it.value();
+
+        QWidget *widget = fieldWidgets.value(fieldName);
+        if (!widget) continue;
+
+        QString value;
+
+        if (QLineEdit *lineEdit = qobject_cast<QLineEdit*>(widget)) {
+            value = lineEdit->text().trimmed();
+        } else if (QDateEdit *dateEdit = qobject_cast<QDateEdit*>(widget)) {
+            value = dateEdit->date().toString(Qt::ISODate);
+        } else if (QComboBox *comboBox = qobject_cast<QComboBox*>(widget)) {
+            value = comboBox->currentText();
+        }
+
+        foreach (ValidationRule* rule , rules){
+            if (!rule->validate(value)) {
+                qDebug() << fieldName << rule->getDescription()  << rule->validate(value);
+                QMessageBox::warning(this, "Ошибка валидации" ,config.getFildDescByName(fieldName)+": " + rule->getDescription());
+                if (QLineEdit *lineEdit = qobject_cast<QLineEdit*>(widget)) {
+                    lineEdit->setFocus();
+                }
+                return false;
+            }
+        }
+
+    }
+
+    return true;
+}
+
 void ClientWindow::saveClient()
 {
+    if (!validateFields()) {
+        return;
+    }
+
     QVariantMap recordData;
 
     for (auto it = fieldWidgets.begin(); it != fieldWidgets.end(); ++it) {

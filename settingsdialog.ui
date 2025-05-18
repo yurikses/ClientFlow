@@ -47,7 +47,7 @@
       </attribute>
       <layout class="QGridLayout" name="gridLayout">
        <item row="0" column="0">
-        <layout class="QGridLayout" name="gridLayout_3" rowstretch="3,0,3,0">
+        <layout class="QGridLayout" name="gridLayout_3" rowstretch="3,0,3">
          <property name="leftMargin">
           <number>10</number>
          </property>
@@ -66,6 +66,37 @@
          <property name="verticalSpacing">
           <number>10</number>
          </property>
+         <item row="2" column="0">
+          <widget class="QGroupBox" name="groupBox">
+           <property name="title">
+            <string>Правила валидации</string>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_4">
+            <item row="0" column="0">
+             <widget class="QTableWidget" name="validationRulesTableWidget">
+              <property name="editTriggers">
+               <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+              </property>
+              <property name="tabKeyNavigation">
+               <bool>false</bool>
+              </property>
+              <property name="selectionMode">
+               <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
+              </property>
+              <attribute name="verticalHeaderCascadingSectionResizes">
+               <bool>true</bool>
+              </attribute>
+              <attribute name="verticalHeaderMinimumSectionSize">
+               <number>60</number>
+              </attribute>
+              <attribute name="verticalHeaderDefaultSectionSize">
+               <number>60</number>
+              </attribute>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
          <item row="0" column="0">
           <widget class="QTableWidget" name="tableWidget">
            <property name="sizePolicy">
@@ -127,45 +158,9 @@
            </item>
           </layout>
          </item>
-         <item row="3" column="0">
-          <layout class="QHBoxLayout" name="horizontalLayout">
-           <item>
-            <widget class="QPushButton" name="addValidationRuleButton">
-             <property name="text">
-              <string>Добавить правило</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="removeValidationRuleButton">
-             <property name="text">
-              <string>Удалить правило</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item row="2" column="0">
-          <widget class="QTableWidget" name="validationRulesTableWidget">
-           <property name="editTriggers">
-            <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
-           </property>
-           <property name="tabKeyNavigation">
-            <bool>false</bool>
-           </property>
-           <property name="selectionMode">
-            <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
-           </property>
-          </widget>
-         </item>
         </layout>
        </item>
       </layout>
-     </widget>
-     <widget class="QWidget" name="tab_2">
-      <attribute name="title">
-       <string>Статистика</string>
-      </attribute>
      </widget>
     </widget>
    </item>

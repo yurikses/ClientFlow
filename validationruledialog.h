@@ -2,34 +2,30 @@
 #define VALIDATIONRULEDIALOG_H
 
 #include <QDialog>
-#include <QMap>
-#include <QStringList>
-#include <qcheckbox>
-#include <qcombobox>
-#include "validation/validationrule.h"
+#include <QJsonArray>
+#include <QCheckBox>
+#include <QLineEdit>
 
 class ValidationRuleDialog : public QDialog {
     Q_OBJECT
 
 public:
-    explicit ValidationRuleDialog(const QStringList& availableFields,
-                                  const QString& currentField = "",
-                                  const QList<ValidationRule*>& rules = {},
-                                  QWidget* parent = nullptr);
+    explicit ValidationRuleDialog(const QString& field, const QJsonArray& currentRules, QWidget* parent = nullptr);
+    ~ValidationRuleDialog();
 
+    // Возвращает обновлённые правила в формате JSON
+    QJsonArray getRules() const;
     QString getSelectedField() const;
-    QList<ValidationRule*> getRules() const;
 
 private:
     void setupUI();
 
-    QStringList fields;
-    QString selectedField;
-    QMap<QString, QList<ValidationRule*>> ruleSets;
+    QString selectedField; // Поле, для которого настраиваем правила
 
-    QComboBox* fieldSelector;
     QCheckBox* notEmptyCheckbox;
     QCheckBox* emailCheckbox;
+    QCheckBox* onlyNumsCheckbox;
+    QCheckBox* onlyLettersCheckbox;
     QLineEdit* minLengthInput;
 };
 
