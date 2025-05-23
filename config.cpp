@@ -44,9 +44,9 @@ void Config::importJsonFile(){
         ColumnSettings dbDefault[] = {
                                       {"clients", "id", 10, "INTEGER", "NULL", "Идентификатор"},
                                       {"clients", "name", 50, "TEXT", "", "ФИО"},
-                                      {"clients", "age", 3, "INTEGER", "0", "Возраст"},
-                                      {"clients", "phone", 3, "VARCHAR", "", "Номер телефона"},
-                                      {"clients", "birthDay", 3, "DATE", "", "День рождения"},
+                                      {"clients", "age", 3, "INT", "0", "Возраст"},
+                                      {"clients", "phone", 12, "TEXT", "", "Номер телефона"},
+                                      {"clients", "birthDay", 10, "DATE", "", "День рождения"},
                                       };
 
         QJsonObject settingsObj;

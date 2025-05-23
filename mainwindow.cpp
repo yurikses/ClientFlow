@@ -5,6 +5,7 @@
 #include <QTableWidget>
 #include <QVBoxLayout>
 #include <QPushButton>
+#include <QDir>
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -197,5 +198,63 @@ void MainWindow::on_action_4_triggered()
     } else {
         QMessageBox::critical(this, "Ошибка", "Не удалось импортировать базу данных.");
     }
+}
+
+
+void MainWindow::on_action_5_triggered()
+{
+    dbManager->closeConnection();
+    QString appDir = QCoreApplication::applicationDirPath();
+    QString dirPath = appDir + "/old_db_" + QDate::currentDate().toString("dd-MM-yyyy");
+    QDir dir;
+    if (!dir.mkpath(dirPath)) {
+        qDebug() << "Failed to create directory:" << dirPath;
+        return;
+    }
+    QString sourceDbPath = "clients.db";
+    QString destDbPath = dirPath + "/old_clients.db";
+
+    // Ensure the source file exists
+    if (!QFile::exists(sourceDbPath)) {
+        qDebug() << "Source file does not exist:" << sourceDbPath;
+        return;
+    }
+
+    // Remove existing file at destination (optional)
+    if (QFile::exists(destDbPath) && !QFile::remove(destDbPath)) {
+        qDebug() << "Failed to remove existing file:" << destDbPath;
+        return;
+    }
+
+    // Perform the copy
+    if (QFile::copy(sourceDbPath, destDbPath)) {
+        qDebug() << "File copied successfully to:" << destDbPath;
+    } else {
+        qDebug() << "Failed to copy file.";
+    }
+    QString dbPath = appDir + "/clients.db";
+    QString configPath = appDir + "/config.json";
+    // Delete existing file
+    if (QFile::exists(dbPath)) {
+        if (!QFile::remove(dbPath)) {
+            qWarning() << "Failed to delete existing database file";
+            return;
+        }
+        qDebug() << "Old DB file deleted successfully";
+    }
+
+    if (QFile::exists(configPath)) {
+        if (!QFile::remove(configPath)) {
+            qWarning() << "Failed to delete existing database file";
+            return;
+        }
+        qDebug() << "Old JSON file deleted successfully";
+    }
+    config.importJsonFile();
+    dbManager->openConnection("clients.db");
+    dbManager->createTable(config.getBDConfig());
+    loadDataFromDatabase(clientsTableWidget);
+    QMessageBox::information(this, "Готово", "Новая база данных создана!");
+
 }
 

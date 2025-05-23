@@ -211,8 +211,6 @@
     <property name="title">
      <string>Файл</string>
     </property>
-    <addaction name="action_Excel"/>
-    <addaction name="action_Excel_2"/>
     <addaction name="action_4"/>
     <addaction name="action_5"/>
    </widget>
@@ -220,7 +218,6 @@
     <property name="title">
      <string>Настройки</string>
     </property>
-    <addaction name="action_2"/>
     <addaction name="action_3"/>
    </widget>
    <addaction name="menu"/>
@@ -230,30 +227,6 @@
   <action name="action">
    <property name="text">
     <string>Сохранить базу клиентов</string>
-   </property>
-  </action>
-  <action name="action_Excel">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Импортирвать из Excel таблицы </string>
-   </property>
-  </action>
-  <action name="action_Excel_2">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Экспортировать в Excel таблицу</string>
-   </property>
-  </action>
-  <action name="action_2">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Экспортировать файл конфигурации</string>
    </property>
   </action>
   <action name="action_3">

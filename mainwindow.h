@@ -36,6 +36,8 @@ private slots:
 
     void on_action_4_triggered();
 
+    void on_action_5_triggered();
+
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
